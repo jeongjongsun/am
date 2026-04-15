@@ -1,0 +1,16 @@
+# 빌드·의존성
+**/node_modules/
+**/target/
+**/dist/
+
+# 로컬 비밀·환경
+backend/application-local.yml
+**/.env
+!**/.env.example
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store

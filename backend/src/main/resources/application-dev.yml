@@ -1,0 +1,12 @@
+# 개발·스테이징 등 PostgreSQL 접속 (Neon / 로컬 등). 값은 환경 변수로만 주입한다.
+# Neon 타임존 Asia/Seoul: docs/guide/08-DB-표준.md
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+logging:
+  level:
+    com.am.backoffice: DEBUG

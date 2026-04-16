@@ -5,6 +5,14 @@
   "nav_logout": "Sign out",
   "nav_admin_password_reset": "Reset password",
   "nav_login": "Sign in",
+  "layout_nav_section": "Menu",
+  "layout_toggle_navigation": "Toggle sidebar navigation",
+  "layout_language_label": "Select language",
+  "home": {
+    "content_title": "Home",
+    "title": "Create Something Beautiful.",
+    "description": "All upcoming pages will extend this /home base layout as the shared standard."
+  },
   "login": {
     "loading": "Checking…",
     "language_label": "Language",

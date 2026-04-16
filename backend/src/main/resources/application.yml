@@ -9,6 +9,29 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  # 2차 인증 메일(SecondAuthMailNotifier). 기본은 Gmail SMTP(smtp.gmail.com:587 + STARTTLS).
+  # 발신 계정: Google 계정 + 앱 비밀번호(https://support.google.com/accounts/answer/185833)를
+  # SPRING_MAIL_USERNAME / SPRING_MAIL_PASSWORD 로만 주입(Git에 비밀번호 넣지 않음).
+  # 다른 SMTP 쓰려면 SPRING_MAIL_HOST·SPRING_MAIL_PORT 로 덮어쓴다.
+  mail:
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    protocol: smtp
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: smtp.gmail.com
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
 
 mybatis:
   mapper-locations: classpath:mapper/**/*.xml
@@ -47,3 +70,9 @@ logging:
     com.am.backoffice: INFO
     # OM 도메인 코드를 이 모듈로 이전할 때 동일 로그 레벨 유지
     com.shopeasy: INFO
+
+am:
+  auth:
+    max-password-fail-count: 5
+    second-auth-ttl-minutes: 10
+    second-auth-code-length: 6

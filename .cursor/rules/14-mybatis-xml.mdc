@@ -1,0 +1,23 @@
+---
+description: MyBatis XML은 도메인 폴더 구조와 쿼리 주석을 강제
+globs: "**/backend/src/main/resources/mapper/**/*.xml,**/backend/src/main/java/**/*Mapper.java"
+alwaysApply: false
+---
+
+# MyBatis XML 작성 규칙
+
+1. Mapper XML은 `backend/src/main/resources/mapper/{domain}/` 구조를 사용한다.
+   - 예: `mapper/auth/`, `mapper/user/`, `mapper/order/`
+
+2. Mapper 인터페이스와 XML 파일명은 1:1로 맞춘다.
+   - 예: `OmUserAuthMapper.java` ↔ `OmUserAuthMapper.xml`
+
+3. XML의 각 SQL 구문(`select`, `insert`, `update`, `delete`) 앞에는 **반드시 주석**을 작성한다.
+   - 쿼리 목적
+   - 주요 조건(예: `is_deleted = false`, 상태값)
+   - 반환값 의미(단건/목록/카운트/갱신건수)
+
+4. Java Mapper 인터페이스의 각 메서드에는 메서드 주석을 작성한다.
+   - 파라미터 의미
+   - 반환값 의미
+   - 비즈니스상 주의사항(조건/잠금/상태 등)

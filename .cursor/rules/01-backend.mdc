@@ -13,5 +13,7 @@ alwaysApply: false
 - **DB**: `docs/guide/08-DB-표준.md` — 테이블 단수·snake_case, 공통 컬럼(created_at/updated_at), 마이그레이션(Flyway).
 - **트랜잭션**: `docs/guide/11-트랜잭션-표준.md` — Service 계층 `@Transactional`/`readOnly`, 다단계 쓰기와 상태전이 동시성 조건.
 - **코딩**: `docs/guide/04-코딩-스타일.md` — Java 네이밍(PascalCase/camelCase/UPPER_SNAKE), 중괄호 항상, Checkstyle/Spotless.
+- **다국어 메시지**: Java 코드에 사용자 노출 메시지를 하드코딩하지 않고 `MessageSource` + `messages*.properties` 키로 관리한다. API는 메시지 키/번역 메시지를 일관되게 반환한다.
+- **Java 주석 규칙**: Java 메서드에는 목적/입출력/예외를 설명하는 메서드 주석을 작성하고, 각 소스의 주요 로직 분기·정책 판단 구간에는 의도를 설명하는 주석을 추가한다.
 
 작성·수정 시 위 문서의 해당 절을 확인하고 준수하세요.

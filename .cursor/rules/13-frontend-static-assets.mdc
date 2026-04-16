@@ -1,0 +1,26 @@
+---
+description: 프론트 정적 자산은 app-public만 런타임 사용
+globs: ["frontend/src/**/*.ts", "frontend/src/**/*.tsx", "frontend/src/**/*.css", "frontend/vite.config.ts", "frontend/index.html"]
+alwaysApply: false
+---
+
+# 프론트 정적 자산 분리 규칙
+
+## 목적
+
+- `frontend/public/`은 Phoenix 원본 테마를 참조하기 위한 보관소다.
+- 런타임(개발 서버/빌드 결과)에서는 `frontend/public/` 파일을 직접 서빙하거나 import하지 않는다.
+
+## 필수 규칙
+
+1. `vite.config.ts`의 `publicDir`는 `app-public`을 사용한다.
+2. 앱 코드(`src/**`)에서 정적 리소스는 `/assets/**`, `/vendors/**`, `/css/**` 등 **`app-public` 기준 경로**만 사용한다.
+3. `frontend/public/`의 파일이 필요하면 `frontend/app-public/`으로 복사한 뒤 사용한다.
+4. `frontend/public/index.html` 같은 템플릿 엔트리 파일을 앱 엔트리로 사용하지 않는다.
+5. `frontend/dist/`는 빌드 산출물(output) 전용이며, 개발 중 정적 자산 소스로 사용하지 않는다.
+
+## 변경 체크
+
+- 새 이미지/폰트/스크립트 추가 시 `app-public`으로 복사했는가?
+- `src` 코드에서 `frontend/public/` 상대 경로 참조가 없는가?
+- `/index.html` 접속 시 React 앱 엔트리(`frontend/index.html`)가 노출되는가?

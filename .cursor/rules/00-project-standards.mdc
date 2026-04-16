@@ -21,7 +21,7 @@ alwaysApply: true
 | 07 테스트 표준 | `docs/guide/07-테스트-표준.md` | 단위/통합, 백엔드·프론트 테스트, 위치·네이밍 |
 | 08 DB 표준 | `docs/guide/08-DB-표준.md` | 테이블·컬럼·인덱스 네이밍, 공통 컬럼, 마이그레이션 |
 | 09 다국어 표준 | `docs/guide/09-다국어-표준.md` | 메시지 키·번역 파일, API 연동, 날짜/숫자/통화, react-i18next |
-| 10 CSS 표준 | `docs/guide/10-CSS-표준.md` | public/css/ 기존 스타일 우선, 필요 시에만 layout.css에 커스텀 추가 |
+| 10 CSS 표준 | `docs/guide/10-CSS-표준.md` | app-public/css/ 기존 스타일 우선, 필요 시에만 layout.css에 커스텀 추가 |
 | 11 트랜잭션 표준 | `docs/guide/11-트랜잭션-표준.md` | Service 계층 트랜잭션 경계, readOnly/쓰기 기준, 동시성 처리 |
 
 ## 반드시 지킬 것
@@ -32,8 +32,8 @@ alwaysApply: true
 - **보안**: 비밀·개인정보 로그/에러에 넣지 않음. 입력은 서버 검증, SQL은 파라미터 바인딩만.
 - **코드**: 네이밍·포맷은 `docs/guide/04-코딩-스타일.md`, DB는 `docs/guide/08-DB-표준.md` 준수.
 - **트랜잭션**: 여러 테이블 쓰기/조회→검증→쓰기 로직은 Service 메서드에 `@Transactional`, 단순 조회는 `@Transactional(readOnly = true)` 적용 (`docs/guide/11-트랜잭션-표준.md`).
-- **다국어**: UI 문구는 메시지 키만 사용(`t('key')`). 키 규칙·번역 파일 구조는 `docs/guide/09-다국어-표준.md` 준수.
-- **CSS**: `frontend/public/css/`(theme.css 등) 기존 스타일을 최대한 사용. 커스텀은 필요 시 `layout.css`에만 추가. **기본(보조) 버튼**은 콘텐츠 배경과 구분되도록 `btn-default-visible` 클래스 적용. `docs/guide/10-CSS-표준.md`, `.cursor/rules/05-css.mdc` 참고.
+- **다국어**: UI 문구는 메시지 키만 사용(`t('key')`). 백엔드(Java) 사용자 노출 메시지도 하드코딩하지 않고 `MessageSource`/`messages*.properties` 키로 관리한다. 키 규칙·번역 파일 구조는 `docs/guide/09-다국어-표준.md` 준수.
+- **CSS**: `frontend/app-public/css/`(theme.css 등) 기존 스타일을 최대한 사용. `frontend/public/`은 참조 전용이며 런타임에서 직접 사용하지 않는다. 커스텀은 필요 시 `layout.css`에만 추가. **기본(보조) 버튼**은 콘텐츠 배경과 구분되도록 `btn-default-visible` 클래스 적용. `docs/guide/10-CSS-표준.md`, `.cursor/rules/05-css.mdc` 참고.
 - **메뉴 문서**: 새 메뉴(화면)를 추가할 때마다 `docs/guide/menu/메뉴명.md` 파일을 생성한다. 규칙: `.cursor/rules/07-menu-docs.mdc`, 참고 예시: `docs/guide/menu/상품관리.md`.
 
 새 기능·수정 시 해당 영역의 `docs/guide/` 표준 문서를 열어 전체 규칙을 확인한 뒤 작업하세요.

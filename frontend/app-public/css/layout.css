@@ -1,0 +1,15 @@
+/**
+ * 앱 전역 커스텀 스타일 (표준: docs/guide/10-CSS-표준.md)
+ * 기존 테마는 /assets/css/theme*.css 를 우선 사용하고, 여기에는 필요한 덮어쓰기만 둡니다.
+ */
+@import url('/assets/fonts/NotoKR-Medium/stylesheet.css');
+
+:root {
+  --phoenix-font-sans-serif: 'notokr-medium', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic',
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* 로그인: 초대형 화면에서 auth 카드 가로 확장 상한 (theme col-xl-8만으로는 px가 무제한 증가) */
+.login-auth-shell {
+  max-width: 64rem;
+}

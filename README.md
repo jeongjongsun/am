@@ -57,7 +57,8 @@ am/
 │   └── guide/              # 개발 표준·가이드 (01~11, 바이브코딩 설정 등)
 │       └── menu/           # 메뉴(화면)별 기능 문서 (신규 화면 추가 시 작성)
 ├── frontend/               # React (Vite + TypeScript) 백오피스 UI
-│   ├── public/             # 정적 자산 (테마 CSS, vendors 등)
+│   ├── app-public/         # 런타임 정적 자산 (Vite publicDir)
+│   ├── public/             # Phoenix 원본 테마 참조본(앱 런타임 미사용)
 │   ├── src/
 │   │   ├── api/            # API 호출 (axios)
 │   │   ├── components/     # 공통 UI
@@ -92,6 +93,8 @@ npm run dev
 - 기본 URL: **http://localhost:5173**
 - 개발 서버는 **`/api`** 요청을 프록시합니다. 기본 대상은 **http://localhost:8080** (`frontend/vite.config.ts`, 환경 변수 `VITE_PROXY_TARGET`으로 변경 가능).
 - API 베이스 URL이 필요하면 `frontend/.env`에 설정합니다. 예시는 `frontend/.env.example` 참고.
+- 정적 파일 정책: `frontend/public`은 **참조 전용**이며, 실제 앱 정적 자산은 `frontend/app-public`에서만 서빙됩니다 (`publicDir: 'app-public'`).
+- `frontend/dist`는 `npm run build` 시 생성되는 **배포 산출물 폴더(output)** 이며, 소스/참조 자산 폴더로 사용하지 않습니다.
 
 ```bash
 # 프로덕션 빌드·로컬 프리뷰

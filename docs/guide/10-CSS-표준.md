@@ -1,6 +1,6 @@
 # CSS 표준 (프론트엔드 스타일 가이드)
 
-화면/모달을 만들 때 **기존 public/css/ 스타일을 최대한 활용**하고, 필요한 경우에만 커스텀 CSS를 추가합니다.
+화면/모달을 만들 때 **기존 app-public/css/ 스타일을 최대한 활용**하고, 필요한 경우에만 커스텀 CSS를 추가합니다.
 
 ---
 
@@ -8,9 +8,9 @@
 
 | 경로 | 용도 |
 |------|------|
-| `frontend/public/css/theme.css` (또는 `theme.min.css`) | Phoenix/Bootstrap 테마 - `.card`, `.btn`, `.table`, `.form-control`, `.modal` 등 |
-| `frontend/public/css/user.css` | 폰트·색상 변수 오버라이드 |
-| `frontend/public/css/product-set-items.css` | 상품 세트 구성품 관련 (`.card`, `.set-item-row`, Choices.js 등) |
+| `frontend/app-public/css/theme.css` (또는 `theme.min.css`) | Phoenix/Bootstrap 테마 - `.card`, `.btn`, `.table`, `.form-control`, `.modal` 등 |
+| `frontend/app-public/css/user.css` | 폰트·색상 변수 오버라이드 |
+| `frontend/app-public/css/product-set-items.css` | 상품 세트 구성품 관련 (`.card`, `.set-item-row`, Choices.js 등) |
 
 - 새 화면·모달을 만들 때 위 클래스를 먼저 활용한다.
 - 예: `card`, `card-header`, `card-body`, `btn`, `btn-primary`, `btn-secondary`, `table`, `table-bordered`, `form-control`, `form-label`, `modal`, `modal-dialog` 등
@@ -21,7 +21,7 @@
 
 - **위 클래스로 표현 불가능한 경우에만** `frontend/src/layout.css`에 새 스타일을 추가한다.
 - 네이밍: BEM 또는 `컴포넌트__요소--변형` (예: `product-edit__tab--active`).
-- 가능하면 `layout.css`에 추가하고, `frontend/public/css/`에 새 파일을 만들지 않는다 (공통 테마와의 일관성 유지).
+- 가능하면 `layout.css`에 추가하고, `frontend/app-public/css/`에 새 파일을 만들지 않는다 (공통 테마와의 일관성 유지).
 
 ---
 
@@ -35,7 +35,7 @@
 
 ## 4. React 앱에서 theme.css 로드
 
-- React SPA에서 `frontend/index.html`에 `<link href="/css/theme.min.css" rel="stylesheet">`, `<link href="/css/user.css" rel="stylesheet">`를 포함해 모든 페이지에서 공통 테마를 사용한다.
+- React SPA에서 `frontend/src/index.css`에서 `@import '/assets/css/theme.min.css'`, `@import '/css/layout.css'`를 사용해 공통 테마를 로드한다. 해당 파일들은 `app-public`에서 서빙된다.
 - `main.tsx`에서 `index.css`, `layout.css`를 import해 theme 이후에 앱 전용 스타일이 적용되도록 한다.
 
 ## 5. 페이지 기본 요소 통일

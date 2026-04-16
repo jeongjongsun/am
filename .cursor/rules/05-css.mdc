@@ -1,5 +1,5 @@
 ---
-description: 화면·모달 작성 시 CSS는 public/css/ 기존 스타일 우선, 필요 시에만 layout.css에 커스텀 추가
+description: 화면·모달 작성 시 CSS는 app-public/css/ 기존 스타일 우선, 필요 시에만 layout.css에 커스텀 추가
 globs: ["**/*.tsx", "**/*.ts", "**/*.css"]
 ---
 
@@ -7,14 +7,14 @@ globs: ["**/*.tsx", "**/*.ts", "**/*.css"]
 
 화면이나 모달을 만들 때:
 
-1. **기본**: `frontend/public/css/`의 기존 CSS를 최대한 사용한다.
+1. **기본**: `frontend/app-public/css/`의 기존 CSS를 최대한 사용한다.
    - `theme.css` / `theme.min.css`: `.card`, `.btn`, `.table`, `.form-control`, `.modal` 등 Phoenix/Bootstrap 클래스
    - `user.css`: 변수 오버라이드
    - `product-set-items.css`: 상품 세트 구성품 관련
 
-2. **커스텀**: 위 클래스로 표현할 수 없을 때만 `frontend/src/layout.css`에 새 스타일을 추가한다.
+2. **커스텀**: 위 클래스로 표현할 수 없을 때만 `frontend/app-public/css/layout.css`에 새 스타일을 추가한다.
 
-3. **금지**: `public/css/`에 새 파일을 만들지 않는다. 공통 테마와의 일관성을 위해 `layout.css`에 모은다.
+3. **금지**: `frontend/public/`은 참조 전용이다. 런타임 자산은 `frontend/app-public/`만 사용하고, 필요 파일은 복사해 사용한다.
 
 4. **입력/수정 폼 행간격 통일**: 등록·수정 폼에서는 행간격을 아래로 통일한다.
    - 그리드: `row g-2` (g-4 사용 금지)

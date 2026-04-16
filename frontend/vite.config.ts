@@ -7,6 +7,9 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
+  // `frontend/public` is reference-only (Phoenix template source).
+  // Runtime static assets are served from `frontend/app-public`.
+  publicDir: 'app-public',
   resolve: {
     alias: {
       '@': path.resolve(rootDir, 'src'),

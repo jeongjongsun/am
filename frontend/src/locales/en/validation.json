@@ -1,3 +1,6 @@
 {
-  "required": "This field is required."
+  "required": "This field is required.",
+  "user_id_required": "Please enter your user ID.",
+  "password_required": "Please enter your password.",
+  "second_factor_code_required": "Please enter the verification code."
 }

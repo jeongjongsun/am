@@ -5,6 +5,14 @@
   "nav_logout": "로그아웃",
   "nav_admin_password_reset": "비밀번호 초기화",
   "nav_login": "로그인",
+  "layout_nav_section": "메뉴",
+  "layout_toggle_navigation": "사이드 메뉴 토글",
+  "layout_language_label": "언어 선택",
+  "home": {
+    "content_title": "Home",
+    "title": "Create Something Beautiful.",
+    "description": "앞으로 추가되는 화면은 이 /home 기본 레이아웃을 공통 기준으로 확장합니다."
+  },
   "login": {
     "loading": "확인 중…",
     "language_label": "언어",

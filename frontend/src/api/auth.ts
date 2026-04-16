@@ -9,20 +9,19 @@ export interface LoginRequest {
 
 /**
  * GET /api/v1/auth/me (docs/guide/02-개발-표준.md).
- * 401 은 세션 없음으로 처리하며, 전역 axios 401 리다이렉트와 충돌하지 않도록 validateStatus 로 수신한다.
+ * 미인증 시에도 HTTP 200 + success=false 로 응답해 브라우저 콘솔 401 노이즈를 피한다.
  */
 export async function fetchAuthMe(): Promise<ApiResponse<AuthMeData | null>> {
-  const { data } = await axiosInstance.get<ApiResponse<AuthMeData | null>>('/api/v1/auth/me', {
-    validateStatus: (status) => status === 200 || status === 401,
-  });
+  const { data } = await axiosInstance.get<ApiResponse<AuthMeData | null>>('/api/v1/auth/me');
   return data;
 }
 
-/** POST /api/v1/auth/login */
+/** POST /api/v1/auth/login (실패 시에도 HTTP 200 + success=false·code 로 구분). */
 export async function login(request: LoginRequest): Promise<ApiResponse<AuthMeData | null>> {
-  const { data } = await axiosInstance.post<ApiResponse<AuthMeData | null>>('/api/v1/auth/login', request, {
-    validateStatus: (status) => status === 200 || status === 401 || status === 403,
-  });
+  const { data } = await axiosInstance.post<ApiResponse<AuthMeData | null>>(
+    '/api/v1/auth/login',
+    request,
+  );
   return data;
 }
 
@@ -38,7 +37,6 @@ export async function verifySecondFactor(
   const { data } = await axiosInstance.post<ApiResponse<AuthMeData | null>>(
     '/api/v1/auth/login/second-factor',
     request,
-    { validateStatus: (status) => status === 200 || status === 401 },
   );
   return data;
 }

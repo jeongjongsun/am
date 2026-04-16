@@ -16,7 +16,6 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -84,15 +83,14 @@ public class AuthController {
       if ("Y".equalsIgnoreCase(trimToEmpty(principal.getSecondAuthYn()))) {
         String email = trimToEmpty(principal.getEmailId());
         if (email.isEmpty()) {
-          return ResponseEntity.status(HttpStatus.FORBIDDEN)
-              .body(
-                  new ApiResponse<>(
-                      false,
-                      null,
-                      message(
-                          "auth.error.second_auth_email_missing",
-                          "2차 인증이 활성화되어 있으나 이메일이 등록되어 있지 않습니다. 관리자에게 문의하세요."),
-                      "ERR_SECOND_AUTH_EMAIL_MISSING"));
+          return ResponseEntity.ok(
+              new ApiResponse<>(
+                  false,
+                  null,
+                  message(
+                      "auth.error.second_auth_email_missing",
+                      "2차 인증이 활성화되어 있으나 이메일이 등록되어 있지 않습니다. 관리자에게 문의하세요."),
+                  "ERR_SECOND_AUTH_EMAIL_MISSING"));
         }
         HttpSession session = httpServletRequest.getSession(true);
         String code = secondAuthChallengeService.begin(session, principal.getUserId());
@@ -114,16 +112,15 @@ public class AuthController {
               principal.getUserId(), principal.getDisplayName(), principal.getGradeCd());
       return ResponseEntity.ok(new ApiResponse<>(true, data, message("auth.login.success", "로그인 성공"), "SUCCESS"));
     } catch (LoginAuthenticationException e) {
-      return ResponseEntity.status(e.getStatus())
-          .body(new ApiResponse<>(false, null, e.getMessage(), e.getCode()));
+      // SPA 콘솔에 4xx가 반복 노출되는 것을 피하기 위해 HTTP 200 + success=false 로 통일한다.
+      return ResponseEntity.ok(new ApiResponse<>(false, null, e.getMessage(), e.getCode()));
     } catch (BadCredentialsException e) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(
-              new ApiResponse<>(
-                  false,
-                  null,
-                  message("auth.error.invalid_credentials", "사용자 정보가 일치하지 않습니다."),
-                  "ERR_INVALID_CREDENTIALS"));
+      return ResponseEntity.ok(
+          new ApiResponse<>(
+              false,
+              null,
+              message("auth.error.invalid_credentials", "사용자 정보가 일치하지 않습니다."),
+              "ERR_INVALID_CREDENTIALS"));
     }
   }
 
@@ -145,15 +142,14 @@ public class AuthController {
               principal.getUserId(), principal.getDisplayName(), principal.getGradeCd());
       return ResponseEntity.ok(new ApiResponse<>(true, data, message("auth.login.success", "로그인 성공"), "SUCCESS"));
     } catch (BadCredentialsException e) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(
-              new ApiResponse<>(
-                  false,
-                  null,
-                  message(
-                      "auth.error.second_factor_invalid",
-                      "인증번호가 올바르지 않았거나 만료되었습니다."),
-                  "ERR_SECOND_FACTOR_INVALID"));
+      return ResponseEntity.ok(
+          new ApiResponse<>(
+              false,
+              null,
+              message(
+                  "auth.error.second_factor_invalid",
+                  "인증번호가 올바르지 않았거나 만료되었습니다."),
+              "ERR_SECOND_FACTOR_INVALID"));
     }
   }
 
@@ -174,10 +170,10 @@ public class AuthController {
     if (authentication == null
         || !authentication.isAuthenticated()
         || authentication instanceof AnonymousAuthenticationToken) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-          .body(
-              new ApiResponse<>(
-                  false, null, message("auth.error.unauthorized", "인증이 필요합니다."), "ERR_UNAUTHORIZED"));
+      // 세션 없음은 비즈니스 실패로 본문으로만 구분 (HTTP 401 시 브라우저 콘솔에 경고가 반복됨).
+      return ResponseEntity.ok(
+          new ApiResponse<>(
+              false, null, message("auth.error.unauthorized", "인증이 필요합니다."), "ERR_UNAUTHORIZED"));
     }
 
     Object principal = authentication.getPrincipal();

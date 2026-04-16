@@ -18,11 +18,11 @@ class AuthControllerTest {
   @Autowired MockMvc mockMvc;
 
   @Test
-  @DisplayName("미인증 시 GET /api/v1/auth/me 는 401 및 표준 에러 코드")
+  @DisplayName("미인증 시 GET /api/v1/auth/me 는 HTTP 200 + success=false 및 ERR_UNAUTHORIZED")
   void me_unauthorized() throws Exception {
     mockMvc
         .perform(get("/api/v1/auth/me"))
-        .andExpect(status().isUnauthorized())
+        .andExpect(status().isOk())
         .andExpect(jsonPath("$.success").value(false))
         .andExpect(jsonPath("$.code").value("ERR_UNAUTHORIZED"));
   }

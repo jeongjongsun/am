@@ -79,7 +79,7 @@ public class OmAuthenticationProvider implements AuthenticationProvider {
     if (principal.getPasswordFailCnt() >= maxPasswordFailCount) {
       throw new LoginAuthenticationException(
           "ERR_PASSWORD_FAIL_EXCEEDED",
-          message("auth.error.password_fail_exceeded", "비밀번호 실패 횟수가 초과되었습니다.\n관리자에게 문의하세요."),
+          message("auth.error.password_fail_exceeded", "비밀번호 실패 횟수가 초과되었습니다.<br>관리자에게 문의하세요."),
           403);
     }
 
@@ -89,7 +89,7 @@ public class OmAuthenticationProvider implements AuthenticationProvider {
       if (increasedCount >= maxPasswordFailCount) {
         throw new LoginAuthenticationException(
             "ERR_PASSWORD_FAIL_EXCEEDED",
-            message("auth.error.password_fail_exceeded", "비밀번호 실패 횟수가 초과되었습니다.\n관리자에게 문의하세요."),
+            message("auth.error.password_fail_exceeded", "비밀번호 실패 횟수가 초과되었습니다.<br>관리자에게 문의하세요."),
             403);
       }
       throw new BadCredentialsException(message("auth.error.invalid_credentials", "사용자 정보가 일치하지 않습니다."));
@@ -107,7 +107,7 @@ public class OmAuthenticationProvider implements AuthenticationProvider {
     if (!"ACTIVE".equals(principal.getUserStatus())) {
       throw new LoginAuthenticationException(
           "ERR_USER_STATUS_NOT_ALLOWED",
-          message("auth.error.status_not_allowed", "로그인이 불가능한 상태입니다.\n관리자에게 문의하세요"),
+          message("auth.error.status_not_allowed", "로그인이 불가능한 상태입니다.<br>관리자에게 문의하세요"),
           403);
     }
 

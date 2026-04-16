@@ -2,9 +2,9 @@
 # Neon 타임존 Asia/Seoul: docs/guide/08-DB-표준.md
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: jdbc:postgresql://ep-long-unit-a1ckjskl-pooler.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require&options=-c%20TimeZone%3DAsia/Seoul
+    username: neondb_owner
+    password: npg_87fZtkEOIzlv
     driver-class-name: org.postgresql.Driver
 
 logging:

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.am.backoffice.mapper.OmUserAuthMapper">
+
+  <!--
+    로그인 대상 사용자 1건을 조회한다.
+    - 조건: user_id 일치 + is_deleted = false
+    - 반환: OmUserAuthRow(비밀번호 해시, 등급, 상태, 실패횟수 포함)
+  -->
+  <select id="findByUserId" parameterType="string" resultType="com.am.backoffice.security.OmUserAuthRow">
+    SELECT user_id,
+           user_nm,
+           COALESCE(user_info-&gt;&gt;'password', '') AS password_hash,
+           COALESCE(user_info-&gt;&gt;'grade_cd', '') AS grade_cd,
+           COALESCE(user_info-&gt;&gt;'user_status', '') AS user_status,
+           COALESCE((user_info-&gt;&gt;'password_fail_cnt')::int, 0) AS password_fail_cnt,
+           COALESCE(user_info-&gt;&gt;'access_ip_limit', 'N') AS access_ip_limit,
+           COALESCE(user_info-&gt;'access_ip', '[]'::jsonb)::text AS access_ip_json,
+           COALESCE(user_info-&gt;&gt;'second_auth_yn', 'N') AS second_auth_yn,
+           COALESCE(user_info-&gt;&gt;'email_id', '') AS email_id
+      FROM om_user_m
+     WHERE user_id = #{userId}
+       AND is_deleted = false
+  </select>
+
+  <!--
+    비밀번호 실패 횟수(password_fail_cnt)를 1 증가시킨다.
+    - 조건: user_id 일치 + is_deleted = false
+    - 반환: 증가 후 실패 횟수(int)
+  -->
+  <select id="increasePasswordFailCount" resultType="int">
+    UPDATE om_user_m
+       SET user_info =
+               CASE
+                 WHEN COALESCE((user_info-&gt;&gt;'password_fail_cnt')::int, 0) + 1 &gt;= #{maxPasswordFailCount}
+                 THEN jsonb_set(
+                        jsonb_set(
+                          user_info,
+                          '{password_fail_cnt}',
+                          to_jsonb(COALESCE((user_info-&gt;&gt;'password_fail_cnt')::int, 0) + 1),
+                          true),
+                        '{user_status}',
+                        to_jsonb('LOCKED'::text),
+                        true)
+                 ELSE jsonb_set(
+                        user_info,
+                        '{password_fail_cnt}',
+                        to_jsonb(COALESCE((user_info-&gt;&gt;'password_fail_cnt')::int, 0) + 1),
+                        true)
+               END,
+           updated_at = CURRENT_TIMESTAMP,
+           updated_by = #{userId}
+     WHERE user_id = #{userId}
+       AND is_deleted = false
+     RETURNING COALESCE((user_info-&gt;&gt;'password_fail_cnt')::int, 0)
+  </select>
+
+  <!--
+    로그인 성공 시 최종 로그인 일시(last_login_dtm)를 현재 시각으로 업데이트한다.
+    - 조건: user_id 일치
+    - 반환: 갱신 건수(int)
+  -->
+  <update id="updateLastLoginDtm" parameterType="string">
+    UPDATE om_user_m
+       SET user_info =
+               jsonb_set(
+                   user_info,
+                   '{last_login_dtm}',
+                   to_jsonb(to_char(CURRENT_TIMESTAMP, 'YYYY-MM-DD"T"HH24:MI:SSOF')),
+                   true),
+           updated_at = CURRENT_TIMESTAMP,
+           updated_by = #{userId}
+     WHERE user_id = #{userId}
+  </update>
+
+  <!--
+    관리자 비밀번호 초기화: password·password_fail_cnt, LOCKED → ACTIVE.
+  -->
+  <update id="adminResetPassword">
+    UPDATE om_user_m
+       SET user_info =
+               jsonb_set(
+                 jsonb_set(
+                   CASE
+                     WHEN COALESCE(user_info-&gt;&gt;'user_status', '') = 'LOCKED'
+                     THEN jsonb_set(user_info, '{user_status}', to_jsonb('ACTIVE'::text), true)
+                     ELSE user_info
+                   END,
+                   '{password}',
+                   to_jsonb(#{passwordHash}::text),
+                   true),
+                 '{password_fail_cnt}',
+                 to_jsonb(0),
+                 true),
+           updated_at = CURRENT_TIMESTAMP,
+           updated_by = #{updatedBy}
+     WHERE user_id = #{userId}
+       AND is_deleted = false
+  </update>
+
+</mapper>

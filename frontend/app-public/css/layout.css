@@ -13,3 +13,68 @@
 .login-auth-shell {
   max-width: 64rem;
 }
+
+/* 2depth 사이드 메뉴: theme의 추가 텍스트 좌측 여백(15px)을 제거해 1depth와 동일 간격으로 통일 */
+.navbar-vertical.navbar-expand-lg .navbar-vertical-content .navbar-nav .nav .nav-link .nav-link-text {
+  padding-left: 0 !important;
+}
+
+.navbar-vertical .navbar-vertical-content .navbar-nav .nav .nav-link .nav-link-icon {
+  margin-right: 0.625rem;
+}
+
+/* B안: top/left는 화이트, content 영역은 옅은 블루 그레이 */
+.navbar-top,
+.navbar-vertical {
+  background-color: #ffffff !important;
+}
+
+.content {
+  background-color: #f3f6ff !important;
+}
+
+/* 사이드 메뉴 타이포/간격 정리 */
+.navbar-vertical .navbar-vertical-content .navbar-vertical-label {
+  margin-top: 1rem;
+  margin-bottom: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.navbar-vertical .navbar-vertical-content .navbar-vertical-line {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.navbar-vertical .navbar-vertical-content .nav-link {
+  min-height: 2rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.navbar-vertical .navbar-vertical-content .nav-link .nav-link-text {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.navbar-vertical .navbar-vertical-content .navbar-nav > .nav-item > .nav-item-wrapper + .nav-item-wrapper {
+  margin-top: 0.125rem;
+}
+
+.navbar-vertical .navbar-vertical-content .parent-wrapper .nav-link {
+  min-height: 1.875rem;
+}
+
+/* 1depth / 2depth 계층 타이포 분리 */
+.navbar-vertical .navbar-vertical-content .navbar-nav > .nav-item > .nav-item-wrapper > .nav-link .nav-link-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.navbar-vertical .navbar-vertical-content .parent-wrapper .nav-link .nav-link-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}

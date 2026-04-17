@@ -214,3 +214,20 @@
 .app-tab-trigger.active + .app-tab-close-btn {
   color: #2563eb;
 }
+
+/* PageLayout: 공통코드 화면과 동일한 헤더 행, 오른쪽 새로고침 */
+.page-layout__header-right {
+  flex-shrink: 0;
+}
+.page-layout__refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* OM order-list-content 와 동일: 그리드 영역 최소 높이 (사용자·화주 목록 공통) */
+.user-list-content,
+.corporation-list-content {
+  position: relative;
+  min-height: 200px;
+}

@@ -105,6 +105,26 @@ public class AdminCommonCodeController {
             "SUCCESS"));
   }
 
+  /**
+   * 표시 순서 저장은 {@code /{mainCd}/{subCd}} 갱신과 경로가 겹치지 않도록 {@code .../items/order} 로 둔다.
+   */
+  @PutMapping("/{mainCd}/items/order")
+  public ResponseEntity<ApiResponse<Void>> reorder(
+      @PathVariable("mainCd") String mainCd,
+      @Valid @RequestBody CommonCodeOrderRequest request,
+      Authentication authentication) {
+    String err = commonCodeAdminService.reorder(mainCd, request, resolveActorUserId(authentication));
+    if (err != null) {
+      return ResponseEntity.ok(new ApiResponse<>(false, null, messageForError(err), err));
+    }
+    return ResponseEntity.ok(
+        new ApiResponse<>(
+            true,
+            null,
+            message("admin.common_code.success.order_saved", "표시 순서가 저장되었습니다."),
+            "SUCCESS"));
+  }
+
   @PutMapping("/{mainCd}/{subCd}")
   public ResponseEntity<ApiResponse<Void>> update(
       @PathVariable("mainCd") String mainCd,
@@ -121,23 +141,6 @@ public class AdminCommonCodeController {
             true,
             null,
             message("admin.common_code.success.updated", "저장되었습니다."),
-            "SUCCESS"));
-  }
-
-  @PutMapping("/{mainCd}/display-order")
-  public ResponseEntity<ApiResponse<Void>> reorder(
-      @PathVariable("mainCd") String mainCd,
-      @Valid @RequestBody CommonCodeOrderRequest request,
-      Authentication authentication) {
-    String err = commonCodeAdminService.reorder(mainCd, request, resolveActorUserId(authentication));
-    if (err != null) {
-      return ResponseEntity.ok(new ApiResponse<>(false, null, messageForError(err), err));
-    }
-    return ResponseEntity.ok(
-        new ApiResponse<>(
-            true,
-            null,
-            message("admin.common_code.success.order_saved", "표시 순서가 저장되었습니다."),
             "SUCCESS"));
   }
 

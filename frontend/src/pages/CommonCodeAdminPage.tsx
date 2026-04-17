@@ -1,11 +1,12 @@
 import { AllCommunityModule } from 'ag-grid-community';
-import type { ColDef, ICellRendererParams } from 'ag-grid-community';
+import type { CellValueChangedEvent, ColDef, ICellRendererParams } from 'ag-grid-community';
 import { AgGridProvider, AgGridReact } from 'ag-grid-react';
 import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { Search } from 'react-feather';
 
 import { backofficeGridTheme } from '@/components/grid/backofficeGridTheme';
 import { AG_GRID_LOCALE_KO } from '@/components/grid/agGridLocaleKo';
@@ -78,9 +79,22 @@ function emptyNameFields(): NameFormFields {
   return { nm_ko: '', nm_en: '', nm_ja: '', nm_vi: '' };
 }
 
-function labelForLocale(codeNm: Record<string, string>, lang: string): string {
-  const v = codeNm[lang] ?? codeNm.ko ?? codeNm.en ?? Object.values(codeNm)[0];
-  return v ?? '';
+/** i18n.language → code_nm JSON 키 (표시명 인라인 편집 대상) */
+function resolveNameKey(lang: string): (typeof NAME_KEYS)[number] {
+  const l = lang.toLowerCase();
+  if (l.startsWith('ko')) {
+    return 'ko';
+  }
+  if (l.startsWith('en')) {
+    return 'en';
+  }
+  if (l.startsWith('ja')) {
+    return 'ja';
+  }
+  if (l.startsWith('vi')) {
+    return 'vi';
+  }
+  return 'ko';
 }
 
 function codeNmFromNameFields(f: NameFormFields): Record<string, string> {
@@ -121,42 +135,6 @@ function itemMatchesQuery(it: CommonCodeItemDto, q: string): boolean {
   return Object.values(it.codeNm).some((v) => matchesText(v, q));
 }
 
-/** 첫 열: 대분류·하위 행 수정 */
-function ModifyFirstCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
-  const data = props.data;
-  const ctx = props.context;
-  if (!data || !ctx) {
-    return null;
-  }
-  if (data.kind === 'GROUP' && data.groupDto) {
-    return (
-      <div className="d-flex align-items-center justify-content-center h-100 py-1">
-        <button
-          type="button"
-          className="btn btn-sm btn-default-visible"
-          onClick={() => ctx.openEditGroup(data.groupDto!)}
-        >
-          {ctx.t('common_code.modify')}
-        </button>
-      </div>
-    );
-  }
-  if (data.kind === 'ITEM' && data.itemDto) {
-    return (
-      <div className="d-flex align-items-center justify-content-center h-100 py-1">
-        <button
-          type="button"
-          className="btn btn-sm btn-default-visible"
-          onClick={() => ctx.openEditItem(data.groupId, data.itemDto!)}
-        >
-          {ctx.t('common_code.modify')}
-        </button>
-      </div>
-    );
-  }
-  return null;
-}
-
 /** 관리 열: 대분류 행에만 펼침·하위 등록 */
 function GroupManageCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
   const data = props.data;
@@ -166,7 +144,7 @@ function GroupManageCell(props: ICellRendererParams<CommonGridRow, unknown, Comm
   }
   const open = ctx.expandedIds.includes(data.groupId);
   return (
-    <div className="d-flex align-items-center gap-1 flex-nowrap justify-content-start py-1">
+    <div className="d-flex align-items-center gap-1 flex-nowrap justify-content-start">
       <button
         type="button"
         className="btn btn-sm btn-outline-secondary py-0 px-2"
@@ -191,7 +169,7 @@ function KindCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridC
   }
   const isGroup = k === 'GROUP';
   return (
-    <div className="d-flex justify-content-center align-items-center h-100 py-1">
+    <div className="d-flex justify-content-center align-items-center h-100">
       <span
         className={`badge badge-phoenix ${isGroup ? 'badge-phoenix-primary' : 'badge-phoenix-secondary'}`}
       >
@@ -209,20 +187,25 @@ function CodeCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridC
   }
   const text = d.kind === 'GROUP' ? d.groupId : (d.subCd ?? '');
   const pad = d.kind === 'ITEM' ? { paddingLeft: '1.25rem' } : undefined;
+  const onClick = () => {
+    if (d.kind === 'GROUP' && d.groupDto) {
+      ctx.openEditGroup(d.groupDto);
+    } else if (d.kind === 'ITEM' && d.itemDto) {
+      ctx.openEditItem(d.groupId, d.itemDto);
+    }
+  };
   return (
-    <code className="small" style={pad}>
-      {text}
-    </code>
+    <div className="d-flex align-items-center h-100">
+      <button
+        type="button"
+        className="btn btn-link me-1"
+        onClick={onClick}
+        aria-label={`${ctx.t('common_code.modify')}: ${text}`}
+      >
+        <span style={pad}>{text}</span>
+      </button>
+    </div>
   );
-}
-
-function LabelCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
-  const d = props.data;
-  const ctx = props.context;
-  if (!d || !ctx) {
-    return null;
-  }
-  return <span className="small text-body">{labelForLocale(d.codeNm, ctx.lang)}</span>;
 }
 
 export function CommonCodeAdminPage() {
@@ -476,6 +459,50 @@ export function CommonCodeAdminPage() {
     setPage(0);
   }, []);
 
+  const invalidateCommonCodeQueries = useCallback(
+    async (groupId: string) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'groups'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'items', groupId] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'search-items'] });
+    },
+    [queryClient],
+  );
+
+  const onCellValueChanged = useCallback(
+    async (e: CellValueChangedEvent<CommonGridRow>) => {
+      const data = e.data;
+      if (!data) {
+        return;
+      }
+      const mainCd = data.kind === 'GROUP' ? 'CODE' : data.groupId;
+      const subCd = data.kind === 'GROUP' ? data.groupId : (data.subCd ?? '');
+      const disp = Math.floor(Number(data.dispSeq));
+      if (!Number.isFinite(disp) || disp < 0) {
+        await showError(t('common_code.error_title'), t('common_code.validation_disp_seq'));
+        await invalidateCommonCodeQueries(data.groupId);
+        return;
+      }
+      const codeNm = { ...data.codeNm };
+      const keys = Object.keys(codeNm).filter((k) => (codeNm[k] ?? '').trim().length > 0);
+      if (keys.length === 0) {
+        await showError(t('common_code.error_title'), t('common_code.validation_name_required'));
+        await invalidateCommonCodeQueries(data.groupId);
+        return;
+      }
+      const body = {
+        codeNm: Object.fromEntries(keys.map((k) => [k, codeNm[k]!.trim()])),
+        useYn: data.useYn === 'N' ? 'N' : 'Y',
+        dispSeq: disp,
+      };
+      const res = await updateCommonCodeRow(mainCd, subCd, body);
+      if (!res.success) {
+        await showError(t('common_code.error_title'), res.message ?? t('common_code.error_default'));
+      }
+      await invalidateCommonCodeQueries(data.groupId);
+    },
+    [invalidateCommonCodeQueries, t],
+  );
+
   const paginationFooter = useMemo(
     () => (
       <DataGridPaginationFooter
@@ -499,19 +526,9 @@ export function CommonCodeAdminPage() {
     [total, page, pageSize, gridLoading, onPageSizeChange, first, last],
   );
 
-  const columnDefs = useMemo<ColDef<CommonGridRow>[]>(
-    () => [
-      {
-        colId: 'modify',
-        headerName: t('common_code.col_modify'),
-        width: 88,
-        minWidth: 80,
-        maxWidth: 100,
-        pinned: 'left',
-        sortable: false,
-        filter: false,
-        cellRenderer: ModifyFirstCell,
-      },
+  const columnDefs = useMemo<ColDef<CommonGridRow>[]>(() => {
+    const nameKey = resolveNameKey(i18n.language);
+    return [
       {
         colId: 'manage',
         headerName: t('common_code.col_manage'),
@@ -550,7 +567,42 @@ export function CommonCodeAdminPage() {
         headerName: t('common_code.col_label'),
         flex: 1.4,
         minWidth: 160,
-        cellRenderer: LabelCell,
+        editable: true,
+        valueGetter: (p) => {
+          const d = p.data;
+          if (!d) {
+            return '';
+          }
+          return (d.codeNm[nameKey] ?? '').trim();
+        },
+        valueSetter: (p) => {
+          const d = p.data;
+          if (!d) {
+            return false;
+          }
+          const trimmed = String(p.newValue ?? '').trim();
+          const merged: Record<string, string> = { ...d.codeNm, [nameKey]: trimmed };
+          for (const k of NAME_KEYS) {
+            const v = (merged[k] ?? '').trim();
+            if (v) {
+              merged[k] = v;
+            } else {
+              delete merged[k];
+            }
+          }
+          const hasAny = NAME_KEYS.some((k) => (merged[k] ?? '').trim().length > 0);
+          if (!hasAny) {
+            return false;
+          }
+          d.codeNm = { ...merged };
+          if (d.groupDto) {
+            d.groupDto = { ...d.groupDto, codeNm: { ...merged } };
+          }
+          if (d.itemDto) {
+            d.itemDto = { ...d.itemDto, codeNm: { ...merged } };
+          }
+          return true;
+        },
       },
       {
         field: 'useYn',
@@ -558,6 +610,26 @@ export function CommonCodeAdminPage() {
         width: 80,
         maxWidth: 100,
         ...COMMON_CODE_GRID_CENTER,
+        editable: true,
+        filter: false,
+        floatingFilter: false,
+        cellEditor: 'agSelectCellEditor',
+        cellEditorParams: { values: ['Y', 'N'] },
+        valueSetter: (p) => {
+          const d = p.data;
+          if (!d) {
+            return false;
+          }
+          const v = p.newValue === 'N' ? 'N' : 'Y';
+          d.useYn = v;
+          if (d.groupDto) {
+            d.groupDto = { ...d.groupDto, useYn: v };
+          }
+          if (d.itemDto) {
+            d.itemDto = { ...d.itemDto, useYn: v };
+          }
+          return true;
+        },
       },
       {
         field: 'dispSeq',
@@ -565,10 +637,39 @@ export function CommonCodeAdminPage() {
         width: 88,
         maxWidth: 110,
         ...COMMON_CODE_GRID_CENTER,
+        editable: true,
+        filter: false,
+        floatingFilter: false,
+        cellEditor: 'agNumberCellEditor',
+        cellDataType: 'number',
+        valueParser: (p) => {
+          const n = Math.floor(Number(p.newValue));
+          if (!Number.isFinite(n) || n < 0) {
+            return p.oldValue;
+          }
+          return n;
+        },
+        valueSetter: (p) => {
+          const d = p.data;
+          if (!d) {
+            return false;
+          }
+          const n = Math.floor(Number(p.newValue));
+          if (!Number.isFinite(n) || n < 0) {
+            return false;
+          }
+          d.dispSeq = n;
+          if (d.groupDto) {
+            d.groupDto = { ...d.groupDto, dispSeq: n };
+          }
+          if (d.itemDto) {
+            d.itemDto = { ...d.itemDto, dispSeq: n };
+          }
+          return true;
+        },
       },
-    ],
-    [t],
-  );
+    ];
+  }, [t, i18n.language]);
 
   const defaultColDef = useMemo<ColDef<CommonGridRow>>(
     () => ({
@@ -718,41 +819,42 @@ export function CommonCodeAdminPage() {
   return (
     <AgGridProvider modules={[AllCommunityModule]}>
       <div className="py-3">
-        <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-          <div>
-            <h1 className="h4 mb-1">{t('common_code.page_title')}</h1>
-            <p className="text-body-secondary small mb-0">{t('common_code.lead_grid')}</p>
-          </div>
-          <div className="d-flex flex-wrap gap-2 align-items-center">
-            <button type="button" className="btn btn-sm btn-primary" onClick={openNewGroupModal}>
-              {t('common_code.add_top_group')}
-            </button>
-          </div>
-        </div>
+        <h2 className="text-body-emphasis mb-4">{t('common_code.page_title')}</h2>
 
-        <div className="card border shadow-sm mb-3">
-          <div className="card-body py-3">
-            <div className="row g-2 align-items-end">
-              <div className="col-md-8 col-lg-9">
-                <label className="form-label small mb-1" htmlFor="cc-search">
-                  {t('common_code.search_label')}
-                </label>
+        <div className="row align-items-end justify-content-between g-3 mb-4">
+          <div className="col min-w-0">
+            <div className="form-icon-container" style={{ maxWidth: 'min(100%, 28rem)' }}>
+              <div className="form-floating">
                 <input
                   id="cc-search"
                   type="search"
-                  className="form-control form-control-sm"
-                  placeholder={t('common_code.search_placeholder')}
+                  className="form-control form-icon-input"
+                  placeholder=" "
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   autoComplete="off"
+                  aria-describedby={
+                    debouncedSearch && searchItemsQuery.isFetching ? 'cc-search-status' : undefined
+                  }
                 />
+                <label className="form-icon-label" htmlFor="cc-search">
+                  {t('common_code.search_floating_label')}
+                </label>
               </div>
-              <div className="col-md-4 col-lg-3 text-md-end">
-                {debouncedSearch && searchItemsQuery.isFetching ? (
-                  <span className="small text-body-secondary">{t('common_code.search_loading')}</span>
-                ) : null}
-              </div>
+              <span className="form-icon text-body d-inline-flex" aria-hidden>
+                <Search size={15} strokeWidth={2} />
+              </span>
             </div>
+            {debouncedSearch && searchItemsQuery.isFetching ? (
+              <p id="cc-search-status" className="small text-body-secondary mt-2 mb-0">
+                {t('common_code.search_loading')}
+              </p>
+            ) : null}
+          </div>
+          <div className="col-auto d-flex flex-wrap align-items-center gap-2">
+            <button type="button" className="btn btn-sm btn-primary" onClick={openNewGroupModal}>
+              {t('common_code.add_top_group')}
+            </button>
           </div>
         </div>
 
@@ -799,6 +901,8 @@ export function CommonCodeAdminPage() {
                 domLayout="normal"
                 enableCellTextSelection
                 ensureDomOrder
+                stopEditingWhenCellsLoseFocus
+                onCellValueChanged={onCellValueChanged}
               />
             </div>
             <div className="data-grid-footer">{paginationFooter}</div>

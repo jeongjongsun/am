@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.am.backoffice.mapper.OmCodeMapper">
+
+  <select id="selectCodeGroups" resultType="com.am.backoffice.code.OmCodeEntity">
+    SELECT main_cd,
+           sub_cd,
+           code_nm::text AS code_nm,
+           code_info::text AS code_info,
+           created_at,
+           updated_at,
+           created_by,
+           updated_by
+      FROM om_code_m
+     WHERE main_cd = 'CODE'
+     ORDER BY COALESCE((code_info-&gt;&gt;'disp_seq')::int, 2147483647),
+              sub_cd
+  </select>
+
+  <select id="selectItemsByMainCd" resultType="com.am.backoffice.code.OmCodeEntity">
+    SELECT main_cd,
+           sub_cd,
+           code_nm::text AS code_nm,
+           code_info::text AS code_info,
+           created_at,
+           updated_at,
+           created_by,
+           updated_by
+      FROM om_code_m
+     WHERE main_cd = #{mainCd}
+     ORDER BY COALESCE((code_info-&gt;&gt;'disp_seq')::int, 2147483647),
+              sub_cd
+  </select>
+
+  <select id="selectByPk" resultType="com.am.backoffice.code.OmCodeEntity">
+    SELECT main_cd,
+           sub_cd,
+           code_nm::text AS code_nm,
+           code_info::text AS code_info,
+           created_at,
+           updated_at,
+           created_by,
+           updated_by
+      FROM om_code_m
+     WHERE main_cd = #{mainCd}
+       AND sub_cd = #{subCd}
+  </select>
+
+  <insert id="insert">
+    INSERT INTO om_code_m (main_cd, sub_cd, code_nm, code_info, created_by, updated_by)
+    VALUES (#{mainCd},
+            #{subCd},
+            CAST(#{codeNmJson} AS jsonb),
+            CAST(#{codeInfoJson} AS jsonb),
+            #{actorUserId},
+            #{actorUserId})
+  </insert>
+
+  <update id="updateCode">
+    UPDATE om_code_m
+       SET code_nm = CAST(#{codeNmJson} AS jsonb),
+           code_info = CAST(#{codeInfoJson} AS jsonb),
+           updated_at = CURRENT_TIMESTAMP,
+           updated_by = #{actorUserId}
+     WHERE main_cd = #{mainCd}
+       AND sub_cd = #{subCd}
+  </update>
+
+  <!-- 기존 code_info의 use_yn 등 다른 키는 유지하고 disp_seq만 덮어쓴다. -->
+  <update id="updateDispSeqOnly">
+    UPDATE om_code_m
+       SET code_info =
+               jsonb_set(
+                   COALESCE(code_info, '{}'::jsonb),
+                   '{disp_seq}',
+                   to_jsonb(#{dispSeq}::int),
+                   true),
+           updated_at = CURRENT_TIMESTAMP,
+           updated_by = #{actorUserId}
+     WHERE main_cd = #{mainCd}
+       AND sub_cd = #{subCd}
+  </update>
+</mapper>

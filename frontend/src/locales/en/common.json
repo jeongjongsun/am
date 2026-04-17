@@ -51,6 +51,7 @@
     "lead": "Register and edit code groups and values. Rows are not physically deleted; set use flag to N to disable. (ADMIN only.)",
     "add_top_group": "Add parent group",
     "search_label": "Search",
+    "search_floating_label": "Code or label",
     "search_placeholder": "Search by code (group ID or value) or label",
     "search_loading": "Loading child codes…",
     "expand": "Expand child codes",
@@ -118,6 +119,8 @@
   },
   "corporations_page": {
     "title": "Shipper (corporation)",
+    "save_error_title": "Save failed",
+    "save_error_default": "Could not save. Check your input or permissions.",
     "forbidden": "Only ADMIN users can open this screen.",
     "active_yes": "Active",
     "active_no": "Inactive",

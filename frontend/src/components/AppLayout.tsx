@@ -66,7 +66,7 @@ const PATH_TAB_ICON: Record<string, TabIconId> = {
   [HOME_PATH]: 'home',
   '/home/basic/shipper-corp': 'briefcase',
   '/home/basic/users': 'users',
-  '/home/service/common-code': 'code',
+  '/home/admin/common-code': 'code',
   '/home/service/permissions': 'shield',
   '/home/service/settings': 'sliders',
   '/home/extra/mall-info': 'shoppingBag',
@@ -140,7 +140,7 @@ export function AppLayout() {
       [HOME_PATH]: homeTitle,
       '/home/basic/shipper-corp': '화주(법인) 정보',
       '/home/basic/users': '사용자 정보',
-      '/home/service/common-code': '공통코드',
+      '/home/admin/common-code': t('nav_admin_common_code'),
       '/home/service/permissions': '권한관리',
       '/home/service/settings': '환경 설정',
       '/home/extra/mall-info': '쇼핑몰 정보',
@@ -358,25 +358,6 @@ export function AppLayout() {
                       <li className="nav-item">
                         <a
                           className="nav-link"
-                          href="/home/service/common-code"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openMenuTab('/home/service/common-code', '공통코드', 'code');
-                          }}
-                        >
-                          <div className="d-flex align-items-center">
-                            <span className="nav-link-icon">
-                              <Code {...NAV_ICON} aria-hidden />
-                            </span>
-                            <span className="nav-link-text-wrapper">
-                              <span className="nav-link-text">공통코드</span>
-                            </span>
-                          </div>
-                        </a>
-                      </li>
-                      <li className="nav-item">
-                        <a
-                          className="nav-link"
                           href="/home/service/permissions"
                           onClick={(e) => {
                             e.preventDefault();
@@ -548,6 +529,24 @@ export function AppLayout() {
 
                 {isAdmin ? (
                   <div className="nav-item-wrapper mt-3">
+                    <p className="navbar-vertical-label mb-1">{t('nav_admin_menu_label')}</p>
+                    <a
+                      className="nav-link label-1"
+                      href="/home/admin/common-code"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openMenuTab('/home/admin/common-code', t('nav_admin_common_code'), 'code');
+                      }}
+                    >
+                      <div className="d-flex align-items-center">
+                        <span className="nav-link-icon">
+                          <Code {...NAV_ICON} aria-hidden />
+                        </span>
+                        <span className="nav-link-text-wrapper">
+                          <span className="nav-link-text">{t('nav_admin_common_code')}</span>
+                        </span>
+                      </div>
+                    </a>
                     <a
                       className="nav-link label-1"
                       href="/home/admin/password-reset"

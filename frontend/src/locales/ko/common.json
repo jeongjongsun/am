@@ -1,6 +1,7 @@
 {
   "app_title": "OM Backoffice",
   "app_client_title": "AININETWORKS",
+  "refresh": "새로고침",
   "nav_home": "홈",
   "nav_logout": "로그아웃",
   "nav_admin_password_reset": "비밀번호 초기화",
@@ -58,6 +59,9 @@
     "kind_group": "대분류",
     "kind_item": "하위",
     "col_expand": "펼침·등록",
+    "col_manage": "관리",
+    "col_modify": "수정",
+    "modify": "수정",
     "col_kind": "구분",
     "col_parent_group": "그룹",
     "col_code": "공통코드",
@@ -111,5 +115,60 @@
     "result_hint": "사용자가 로그인한 뒤 반드시 비밀번호를 변경하도록 안내하세요.",
     "error_title": "초기화 실패",
     "error_default": "요청을 처리할 수 없습니다. 권한 또는 대상 사용자를 확인하세요."
+  },
+  "corporations_page": {
+    "title": "화주(법인) 정보",
+    "forbidden": "등급 ADMIN 만 이 화면을 사용할 수 있습니다.",
+    "active_yes": "사용",
+    "active_no": "중지",
+    "col_row_num": "번호",
+    "col_corporation_cd": "법인 코드",
+    "col_corporation_nm": "법인 명",
+    "col_business_no": "사업자등록번호",
+    "col_ceo_nm": "대표자명",
+    "col_address": "주소",
+    "col_tel_no": "대표전화",
+    "col_fax_no": "팩스",
+    "col_email": "대표이메일",
+    "col_homepage_url": "홈페이지",
+    "col_remark": "비고",
+    "col_active": "사용 여부",
+    "col_created": "등록일",
+    "col_updated": "수정일",
+    "col_created_by": "등록자",
+    "col_updated_by": "수정자"
+  },
+  "users_page": {
+    "title": "사용자 정보",
+    "description": "등록된 사용자를 조회합니다. (등급 ADMIN 전용)",
+    "forbidden": "등급 ADMIN 만 이 화면을 사용할 수 있습니다.",
+    "col_row_num": "번호",
+    "col_user_id": "사용자 ID",
+    "col_user_nm": "사용자명",
+    "col_grade": "등급",
+    "col_status": "상태",
+    "col_corp": "법인코드",
+    "col_email": "이메일",
+    "col_mobile": "휴대전화",
+    "col_last_login": "최종 로그인",
+    "col_auth_group": "권한 그룹",
+    "col_second_auth": "2차 인증",
+    "col_created": "등록일",
+    "col_updated": "수정일"
+  },
+  "grid": {
+    "exportExcel": "Excel 받기",
+    "loading": "불러오는 중…",
+    "pagination": {
+      "pageSizeLabel": "페이지 크기",
+      "pageSize": "페이지 크기",
+      "noData": "데이터가 없습니다.",
+      "rangeToOf": "{{from}} ~ {{to}} / {{total}}",
+      "pageOf": "페이지 {{page}} / {{totalPages}}",
+      "first": "처음",
+      "prev": "이전",
+      "next": "다음",
+      "last": "마지막"
+    }
   }
 }

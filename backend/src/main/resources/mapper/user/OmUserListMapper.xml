@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.am.backoffice.mapper.OmUserListMapper">
+
+  <select id="countNotDeleted" resultType="long">
+    SELECT COUNT(*)
+      FROM om_user_m
+     WHERE is_deleted = false
+  </select>
+
+  <!-- sortColumn / sortDirection 은 서비스에서 화이트리스트만 허용 -->
+  <select id="selectPage" resultType="com.am.backoffice.user.OmUserListRow">
+    SELECT u.user_id,
+           u.user_nm,
+           COALESCE(u.user_info-&gt;&gt;'grade_cd', '') AS grade_cd,
+           COALESCE(u.user_info-&gt;&gt;'user_status', '') AS user_status,
+           COALESCE(u.user_info-&gt;&gt;'corporation_cd', '') AS corporation_cd,
+           COALESCE(u.user_info-&gt;&gt;'email_id', '') AS email_id,
+           COALESCE(u.user_info-&gt;&gt;'mobile_no', '') AS mobile_no,
+           COALESCE(u.user_info-&gt;&gt;'last_login_dtm', '') AS last_login_dtm,
+           COALESCE(u.user_info-&gt;&gt;'auth_group', '') AS auth_group,
+           COALESCE(u.user_info-&gt;&gt;'second_auth_yn', '') AS second_auth_yn,
+           u.created_at,
+           u.updated_at
+      FROM om_user_m u
+     WHERE u.is_deleted = false
+     ORDER BY
+    <choose>
+      <when test="sortColumn == 'user_nm'">u.user_nm ${sortDirection}</when>
+      <when test="sortColumn == 'created_at'">u.created_at ${sortDirection}</when>
+      <otherwise>u.user_id ${sortDirection}</otherwise>
+    </choose>
+     LIMIT #{limit} OFFSET #{offset}
+  </select>
+
+</mapper>

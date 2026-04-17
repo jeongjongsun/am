@@ -95,7 +95,7 @@ export async function saveCommonCodeDisplayOrder(
 ): Promise<ApiResponse<null>> {
   const enc = encodeURIComponent(mainCd);
   const { data } = await axiosInstance.put<ApiResponse<null>>(
-    `${BASE}/${enc}/display-order`,
+    `${BASE}/${enc}/items/order`,
     { orderedSubCds },
     { validateStatus: (s) => s === 200 || s === 403 },
   );

@@ -8,6 +8,7 @@
   "layout_nav_section": "Menu",
   "layout_toggle_navigation": "Toggle sidebar navigation",
   "layout_language_label": "Select language",
+  "layout_close_all_tabs": "Close all open tabs",
   "home": {
     "content_title": "Home",
     "title": "Create Something Beautiful.",

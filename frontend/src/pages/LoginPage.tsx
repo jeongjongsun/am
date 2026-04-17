@@ -1,7 +1,9 @@
+import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { CheckCircle, Eye, EyeOff, Lock, Mail, User } from 'react-feather';
 
 import { login, verifySecondFactor } from '@/api/auth';
 import { useAuthMe } from '@/hooks/useAuthMe';
@@ -9,9 +11,13 @@ import { setAppLocale } from '@/locales';
 import { clearRememberedLoginUserId, readRememberedLoginUserId, writeRememberedLoginUserId } from '@/utils/rememberLoginUserId';
 import { showError } from '@/utils/swal';
 
+const FORM_ICON = { size: 18, strokeWidth: 2 } as const;
+const HERO_CHECK_ICON = { size: 18, strokeWidth: 2 } as const;
+
 export function LoginPage() {
   const { t, i18n } = useTranslation(['common', 'validation']);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isPending, data } = useAuthMe();
   const emailId = useId();
   const passwordId = useId();
@@ -86,12 +92,16 @@ export function LoginPage() {
                       <p className="text-body-tertiary mb-0">{t('login.hero_subtitle')}</p>
                       <div className="mt-4 text-start mx-auto mx-md-0" style={{ maxWidth: '22rem' }}>
                         <p className="small fw-semibold text-body-secondary mb-1 d-flex align-items-center">
-                          <span className="uil uil-check-circle text-success me-2 flex-shrink-0" aria-hidden="true" />
+                          <span className="text-success me-2 flex-shrink-0 d-inline-flex" aria-hidden="true">
+                            <CheckCircle {...HERO_CHECK_ICON} />
+                          </span>
                           {t('login.hero_forgot_lead')}
                         </p>
                         <p className="small text-body-tertiary mb-3">{t('login.hero_forgot_detail')}</p>
                         <p className="small fw-semibold text-body-secondary mb-1 d-flex align-items-center">
-                          <span className="uil uil-check-circle text-success me-2 flex-shrink-0" aria-hidden="true" />
+                          <span className="text-success me-2 flex-shrink-0 d-inline-flex" aria-hidden="true">
+                            <CheckCircle {...HERO_CHECK_ICON} />
+                          </span>
                           {t('login.hero_tip_account')}
                         </p>
                         <p className="small text-body-tertiary mb-0">{t('login.hero_tip_session')}</p>
@@ -157,6 +167,7 @@ export function LoginPage() {
                                 } else {
                                   clearRememberedLoginUserId();
                                 }
+                                queryClient.setQueryData(['auth', 'me'], response);
                                 navigate('/home', { replace: true });
                                 return;
                               }
@@ -209,6 +220,7 @@ export function LoginPage() {
                               } else {
                                 clearRememberedLoginUserId();
                               }
+                              queryClient.setQueryData(['auth', 'me'], response);
                               navigate('/home', { replace: true });
                               return;
                             }
@@ -251,7 +263,12 @@ export function LoginPage() {
                               aria-invalid={fieldErrors.userId ? true : undefined}
                               aria-describedby={fieldErrors.userId ? `${emailId}-error` : undefined}
                             />
-                            <span className="uil uil-user text-body fs-9 form-icon" aria-hidden="true" />
+                            <span
+                              className="text-body fs-9 form-icon d-inline-flex align-items-center justify-content-center"
+                              aria-hidden="true"
+                            >
+                              <User {...FORM_ICON} />
+                            </span>
                           </div>
                           {fieldErrors.userId ? (
                             <div className="invalid-feedback d-block" id={`${emailId}-error`}>
@@ -285,20 +302,26 @@ export function LoginPage() {
                                 aria-invalid={fieldErrors.password ? true : undefined}
                                 aria-describedby={fieldErrors.password ? `${passwordId}-error` : undefined}
                               />
-                              <span className="uil uil-lock-alt text-body fs-9 form-icon" aria-hidden="true" />
+                              <span
+                                className="text-body fs-9 form-icon d-inline-flex align-items-center justify-content-center"
+                                aria-hidden="true"
+                              >
+                                <Lock {...FORM_ICON} />
+                              </span>
                               <button
                                 type="button"
-                                className="btn px-3 py-0 h-100 position-absolute top-0 end-0 fs-7 text-body-tertiary"
+                                className="btn px-3 py-0 h-100 position-absolute top-0 end-0 fs-7 text-body-tertiary d-inline-flex align-items-center justify-content-center"
                                 data-password-toggle="data-password-toggle"
                                 aria-label={
                                   showPassword ? t('login.password_hide') : t('login.password_show')
                                 }
                                 onClick={() => setShowPassword((v) => !v)}
                               >
-                                <span
-                                  className={showPassword ? 'uil uil-eye-slash' : 'uil uil-eye'}
-                                  aria-hidden="true"
-                                />
+                                {showPassword ? (
+                                  <EyeOff size={18} strokeWidth={2} aria-hidden />
+                                ) : (
+                                  <Eye size={18} strokeWidth={2} aria-hidden />
+                                )}
                               </button>
                             </div>
                             {fieldErrors.password ? (
@@ -334,7 +357,12 @@ export function LoginPage() {
                                   fieldErrors.secondFactorCode ? `${secondCodeId}-error` : undefined
                                 }
                               />
-                              <span className="uil uil-envelope-alt text-body fs-9 form-icon" aria-hidden="true" />
+                              <span
+                                className="text-body fs-9 form-icon d-inline-flex align-items-center justify-content-center"
+                                aria-hidden="true"
+                              >
+                                <Mail {...FORM_ICON} />
+                              </span>
                             </div>
                             {fieldErrors.secondFactorCode ? (
                               <div className="invalid-feedback d-block" id={`${secondCodeId}-error`}>

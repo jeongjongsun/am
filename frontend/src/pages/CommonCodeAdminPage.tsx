@@ -510,7 +510,6 @@ export function CommonCodeAdminPage() {
         pinned: 'left',
         sortable: false,
         filter: false,
-        ...COMMON_CODE_GRID_CENTER,
         cellRenderer: ModifyFirstCell,
       },
       {

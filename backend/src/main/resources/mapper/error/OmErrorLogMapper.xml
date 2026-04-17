@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.am.backoffice.mapper.OmErrorLogMapper">
+
+  <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+    INSERT INTO om_error_log_m (
+      created_at,
+      exception_class,
+      exception_message,
+      stack_trace,
+      root_cause_class,
+      err_code,
+      http_status,
+      http_method,
+      api_path,
+      request_id,
+      actor_user_id,
+      client_path,
+      ip_addr,
+      user_agent,
+      app_profile,
+      error_fingerprint,
+      detail
+    ) VALUES (
+      CURRENT_TIMESTAMP,
+      #{exceptionClass},
+      #{exceptionMessage},
+      #{stackTrace},
+      #{rootCauseClass},
+      #{errCode},
+      #{httpStatus},
+      #{httpMethod},
+      #{apiPath},
+      #{requestId},
+      #{actorUserId},
+      #{clientPath},
+      #{ipAddr},
+      #{userAgent},
+      #{appProfile},
+      #{errorFingerprint},
+      CAST(#{detailJson} AS jsonb)
+    )
+  </insert>
+
+  <select id="countAll" resultType="long">
+    SELECT COUNT(*) FROM om_error_log_m
+  </select>
+
+  <!-- 목록: 메시지는 길이 상한(표시용), 스택 미포함 -->
+  <select id="selectPage" resultType="com.am.backoffice.error.OmErrorLogSummaryRow">
+    SELECT id,
+           created_at,
+           exception_class,
+           SUBSTRING(COALESCE(exception_message, '') FROM 1 FOR 500) AS exception_message,
+           err_code,
+           http_status,
+           request_id,
+           actor_user_id,
+           api_path
+      FROM om_error_log_m
+     ORDER BY created_at DESC, id DESC
+     LIMIT #{size} OFFSET #{offset}
+  </select>
+
+  <select id="selectById" resultType="com.am.backoffice.error.OmErrorLogEntity">
+    SELECT id,
+           created_at,
+           exception_class,
+           exception_message,
+           stack_trace,
+           root_cause_class,
+           err_code,
+           http_status,
+           http_method,
+           api_path,
+           request_id,
+           actor_user_id,
+           client_path,
+           ip_addr,
+           user_agent,
+           app_profile,
+           error_fingerprint,
+           detail::text AS detail_json
+      FROM om_error_log_m
+     WHERE id = #{id}
+  </select>
+
+</mapper>

@@ -2,14 +2,15 @@ import { AllCommunityModule } from 'ag-grid-community';
 import type { ColDef, ICellRendererParams } from 'ag-grid-community';
 import { AgGridProvider, AgGridReact } from 'ag-grid-react';
 import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-quartz.css';
-
+import { backofficeGridTheme } from '@/components/grid/backofficeGridTheme';
+import { AG_GRID_LOCALE_KO } from '@/components/grid/agGridLocaleKo';
+import '@/components/grid/DataGrid.css';
+import { useAgGridViewportHeight } from '@/components/grid/useAgGridViewportHeight';
 import {
   createCommonCodeGroup,
   createCommonCodeItem,
@@ -19,6 +20,7 @@ import {
   type CommonCodeGroupDto,
   type CommonCodeItemDto,
 } from '@/api/commonCodeAdmin';
+import { DataGridPaginationFooter } from '@/components/grid';
 import { useAuthMe } from '@/hooks/useAuthMe';
 import { showError } from '@/utils/swal';
 
@@ -54,6 +56,12 @@ export type CommonGridRow = {
   updatedAt?: string | null;
   groupDto?: CommonCodeGroupDto;
   itemDto?: CommonCodeItemDto;
+};
+
+/** 구분·사용·순서 열 헤더·셀 가운데 정렬 */
+const COMMON_CODE_GRID_CENTER: Pick<ColDef<CommonGridRow>, 'headerStyle' | 'cellStyle'> = {
+  headerStyle: { textAlign: 'center' },
+  cellStyle: { textAlign: 'center' },
 };
 
 export type CommonGridContext = {
@@ -113,37 +121,8 @@ function itemMatchesQuery(it: CommonCodeItemDto, q: string): boolean {
   return Object.values(it.codeNm).some((v) => matchesText(v, q));
 }
 
-/** AG Grid: 대분류 행에만 + / 하위 등록 */
-function GroupExpandCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
-  const data = props.data;
-  const ctx = props.context;
-  if (!data || data.kind !== 'GROUP' || !ctx) {
-    return null;
-  }
-  const open = ctx.expandedIds.includes(data.groupId);
-  return (
-    <div className="d-flex align-items-center gap-1 flex-nowrap">
-      <button
-        type="button"
-        className="btn btn-sm btn-default-visible py-0 px-2"
-        aria-expanded={open}
-        title={open ? ctx.t('common_code.collapse') : ctx.t('common_code.expand')}
-        onClick={() => ctx.toggleExpand(data.groupId)}
-      >
-        {open ? '−' : '+'}
-      </button>
-      <button
-        type="button"
-        className="btn btn-sm btn-primary py-0 px-2"
-        onClick={() => ctx.openChildModal(data.groupId)}
-      >
-        {ctx.t('common_code.add_child')}
-      </button>
-    </div>
-  );
-}
-
-function RowActionsCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
+/** 첫 열: 대분류·하위 행 수정 */
+function ModifyFirstCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
   const data = props.data;
   const ctx = props.context;
   if (!data || !ctx) {
@@ -151,27 +130,57 @@ function RowActionsCell(props: ICellRendererParams<CommonGridRow, unknown, Commo
   }
   if (data.kind === 'GROUP' && data.groupDto) {
     return (
-      <button
-        type="button"
-        className="btn btn-sm btn-default-visible"
-        onClick={() => ctx.openEditGroup(data.groupDto!)}
-      >
-        {ctx.t('common_code.edit')}
-      </button>
+      <div className="d-flex align-items-center justify-content-center h-100 py-1">
+        <button
+          type="button"
+          className="btn btn-sm btn-default-visible"
+          onClick={() => ctx.openEditGroup(data.groupDto!)}
+        >
+          {ctx.t('common_code.modify')}
+        </button>
+      </div>
     );
   }
   if (data.kind === 'ITEM' && data.itemDto) {
     return (
-      <button
-        type="button"
-        className="btn btn-sm btn-default-visible"
-        onClick={() => ctx.openEditItem(data.groupId, data.itemDto!)}
-      >
-        {ctx.t('common_code.edit')}
-      </button>
+      <div className="d-flex align-items-center justify-content-center h-100 py-1">
+        <button
+          type="button"
+          className="btn btn-sm btn-default-visible"
+          onClick={() => ctx.openEditItem(data.groupId, data.itemDto!)}
+        >
+          {ctx.t('common_code.modify')}
+        </button>
+      </div>
     );
   }
   return null;
+}
+
+/** 관리 열: 대분류 행에만 펼침·하위 등록 */
+function GroupManageCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
+  const data = props.data;
+  const ctx = props.context;
+  if (!data || data.kind !== 'GROUP' || !ctx) {
+    return null;
+  }
+  const open = ctx.expandedIds.includes(data.groupId);
+  return (
+    <div className="d-flex align-items-center gap-1 flex-nowrap justify-content-start py-1">
+      <button
+        type="button"
+        className="btn btn-sm btn-outline-secondary py-0 px-2"
+        aria-expanded={open}
+        title={open ? ctx.t('common_code.collapse') : ctx.t('common_code.expand')}
+        onClick={() => ctx.toggleExpand(data.groupId)}
+      >
+        {open ? '−' : '+'}
+      </button>
+      <button type="button" className="btn btn-sm btn-primary py-0 px-2" onClick={() => ctx.openChildModal(data.groupId)}>
+        {ctx.t('common_code.add_child')}
+      </button>
+    </div>
+  );
 }
 
 function KindCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
@@ -180,7 +189,16 @@ function KindCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridC
   if (!ctx) {
     return null;
   }
-  return <span className="small">{k === 'GROUP' ? ctx.t('common_code.kind_group') : ctx.t('common_code.kind_item')}</span>;
+  const isGroup = k === 'GROUP';
+  return (
+    <div className="d-flex justify-content-center align-items-center h-100 py-1">
+      <span
+        className={`badge badge-phoenix ${isGroup ? 'badge-phoenix-primary' : 'badge-phoenix-secondary'}`}
+      >
+        {isGroup ? ctx.t('common_code.kind_group') : ctx.t('common_code.kind_item')}
+      </span>
+    </div>
+  );
 }
 
 function CodeCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
@@ -212,6 +230,9 @@ export function CommonCodeAdminPage() {
   const queryClient = useQueryClient();
   const { data: meRes } = useAuthMe();
   const isAdmin = meRes?.success === true && meRes.data?.gradeCd === 'ADMIN';
+
+  const gridWrapperRef = useRef<HTMLDivElement>(null);
+  const gridHeight = useAgGridViewportHeight(gridWrapperRef, 24);
 
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -424,24 +445,91 @@ export function CommonCodeAdminPage() {
     searchItemsMap,
   ]);
 
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(1000);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    const maxP = pageSize > 0 ? Math.max(0, Math.ceil(rowData.length / pageSize) - 1) : 0;
+    setPage((p) => Math.min(p, maxP));
+  }, [rowData.length, pageSize]);
+
+  const gridLoading =
+    groupsQuery.isPending ||
+    groupsQuery.isFetching ||
+    (debouncedSearch.length > 0 && searchItemsQuery.isFetching);
+
+  const total = rowData.length;
+  const first = page <= 0;
+  const last = pageSize <= 0 || (page + 1) * pageSize >= total || total === 0;
+
+  const pagedRowData = useMemo(
+    () => rowData.slice(page * pageSize, page * pageSize + pageSize),
+    [rowData, page, pageSize],
+  );
+
+  const onPageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setPage(0);
+  }, []);
+
+  const paginationFooter = useMemo(
+    () => (
+      <DataGridPaginationFooter
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        pageSizeOptions={[100, 1000, 5000, 10000]}
+        loading={gridLoading}
+        onPageSizeChange={onPageSizeChange}
+        onFirst={() => setPage(0)}
+        onPrev={() => setPage((p) => Math.max(0, p - 1))}
+        onNext={() => setPage((p) => (last ? p : p + 1))}
+        onLast={() => {
+          const tp = pageSize > 0 ? Math.max(0, Math.ceil(total / pageSize) - 1) : 0;
+          setPage(tp);
+        }}
+        first={first}
+        last={last}
+      />
+    ),
+    [total, page, pageSize, gridLoading, onPageSizeChange, first, last],
+  );
+
   const columnDefs = useMemo<ColDef<CommonGridRow>[]>(
     () => [
       {
-        colId: 'expand',
-        headerName: t('common_code.col_expand'),
+        colId: 'modify',
+        headerName: t('common_code.col_modify'),
+        width: 88,
+        minWidth: 80,
+        maxWidth: 100,
+        pinned: 'left',
+        sortable: false,
+        filter: false,
+        ...COMMON_CODE_GRID_CENTER,
+        cellRenderer: ModifyFirstCell,
+      },
+      {
+        colId: 'manage',
+        headerName: t('common_code.col_manage'),
         width: 168,
         minWidth: 168,
         maxWidth: 200,
         pinned: 'left',
         sortable: false,
         filter: false,
-        cellRenderer: GroupExpandCell,
+        cellRenderer: GroupManageCell,
       },
       {
         colId: 'kind',
         headerName: t('common_code.col_kind'),
-        width: 88,
+        width: 100,
         sortable: false,
+        ...COMMON_CODE_GRID_CENTER,
         cellRenderer: KindCell,
       },
       {
@@ -470,21 +558,14 @@ export function CommonCodeAdminPage() {
         headerName: t('common_code.col_use'),
         width: 80,
         maxWidth: 100,
+        ...COMMON_CODE_GRID_CENTER,
       },
       {
         field: 'dispSeq',
         headerName: t('common_code.col_disp'),
         width: 88,
         maxWidth: 110,
-      },
-      {
-        colId: 'actions',
-        headerName: t('common_code.col_actions'),
-        width: 100,
-        pinned: 'right',
-        sortable: false,
-        filter: false,
-        cellRenderer: RowActionsCell,
+        ...COMMON_CODE_GRID_CENTER,
       },
     ],
     [t],
@@ -494,9 +575,14 @@ export function CommonCodeAdminPage() {
     () => ({
       sortable: true,
       resizable: true,
-      suppressHeaderMenuButton: true,
+      filter: true,
     }),
     [],
+  );
+
+  const agGridLocaleText = useMemo(
+    () => (i18n.language === 'ko' ? AG_GRID_LOCALE_KO : undefined),
+    [i18n.language],
   );
 
   const onSaveGroup = async () => {
@@ -671,16 +757,53 @@ export function CommonCodeAdminPage() {
           </div>
         </div>
 
-        <div className="ag-theme-quartz border rounded overflow-hidden" style={{ width: '100%', height: 'min(70vh, 640px)' }}>
-          <AgGridReact<CommonGridRow>
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={defaultColDef}
-            context={gridContext}
-            getRowId={(p) => p.data.rowKey}
-            animateRows
-            domLayout="normal"
-          />
+        <div
+          className="data-grid-wrapper"
+          ref={gridWrapperRef}
+          style={{
+            height: gridHeight,
+            minHeight: 200,
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+          }}
+        >
+          <div
+            className="data-grid-container"
+            style={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              width: '100%',
+            }}
+          >
+            <div className="data-grid-body" style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+              {gridLoading ? (
+                <div className="data-grid-loading-overlay" aria-live="polite" aria-busy="true">
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">{t('common_code.loading')}</span>
+                  </div>
+                  <span className="data-grid-loading-text">{t('common_code.loading')}</span>
+                </div>
+              ) : null}
+              <AgGridReact<CommonGridRow>
+                key={i18n.language}
+                theme={backofficeGridTheme}
+                localeText={agGridLocaleText}
+                rowData={pagedRowData}
+                columnDefs={columnDefs}
+                defaultColDef={defaultColDef}
+                context={gridContext}
+                getRowId={(p) => p.data.rowKey}
+                animateRows
+                domLayout="normal"
+                enableCellTextSelection
+                ensureDomOrder
+              />
+            </div>
+            <div className="data-grid-footer">{paginationFooter}</div>
+          </div>
         </div>
 
         {modalOpen ? (

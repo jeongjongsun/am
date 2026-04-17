@@ -8,6 +8,7 @@
   "layout_nav_section": "메뉴",
   "layout_toggle_navigation": "사이드 메뉴 토글",
   "layout_language_label": "언어 선택",
+  "layout_close_all_tabs": "열린 탭 모두 닫기",
   "home": {
     "content_title": "Home",
     "title": "Create Something Beautiful.",

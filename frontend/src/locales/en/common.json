@@ -1,6 +1,7 @@
 {
   "app_title": "OM Backoffice",
   "app_client_title": "AININETWORKS",
+  "refresh": "Refresh",
   "nav_home": "Home",
   "nav_logout": "Sign out",
   "nav_admin_password_reset": "Reset password",
@@ -58,6 +59,9 @@
     "kind_group": "Parent",
     "kind_item": "Child",
     "col_expand": "Expand / add",
+    "col_manage": "Manage",
+    "col_modify": "Edit",
+    "modify": "Edit",
     "col_kind": "Type",
     "col_parent_group": "Group",
     "col_code": "Code",
@@ -111,5 +115,60 @@
     "result_hint": "Ask the user to change their password immediately after signing in.",
     "error_title": "Reset failed",
     "error_default": "Could not complete the request. Check permissions or the target user."
+  },
+  "corporations_page": {
+    "title": "Shipper (corporation)",
+    "forbidden": "Only ADMIN users can open this screen.",
+    "active_yes": "Active",
+    "active_no": "Inactive",
+    "col_row_num": "No.",
+    "col_corporation_cd": "Corporation code",
+    "col_corporation_nm": "Name",
+    "col_business_no": "Business registration no.",
+    "col_ceo_nm": "CEO",
+    "col_address": "Address",
+    "col_tel_no": "Phone",
+    "col_fax_no": "Fax",
+    "col_email": "Email",
+    "col_homepage_url": "Website",
+    "col_remark": "Remark",
+    "col_active": "Active",
+    "col_created": "Created",
+    "col_updated": "Updated",
+    "col_created_by": "Created by",
+    "col_updated_by": "Updated by"
+  },
+  "users_page": {
+    "title": "Users",
+    "description": "Browse registered users. (ADMIN only.)",
+    "forbidden": "Only ADMIN users can open this screen.",
+    "col_row_num": "No.",
+    "col_user_id": "User ID",
+    "col_user_nm": "Name",
+    "col_grade": "Grade",
+    "col_status": "Status",
+    "col_corp": "Corporation",
+    "col_email": "Email",
+    "col_mobile": "Mobile",
+    "col_last_login": "Last login",
+    "col_auth_group": "Auth group",
+    "col_second_auth": "2FA",
+    "col_created": "Created",
+    "col_updated": "Updated"
+  },
+  "grid": {
+    "exportExcel": "Export Excel",
+    "loading": "Loading…",
+    "pagination": {
+      "pageSizeLabel": "Page size",
+      "pageSize": "Page size",
+      "noData": "No data to display.",
+      "rangeToOf": "{{from}} ~ {{to}} / {{total}}",
+      "pageOf": "Page {{page}} / {{totalPages}}",
+      "first": "First",
+      "prev": "Previous",
+      "next": "Next",
+      "last": "Last"
+    }
   }
 }

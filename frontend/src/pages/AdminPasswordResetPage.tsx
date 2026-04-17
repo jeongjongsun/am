@@ -1,16 +1,24 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import { adminResetUserPassword } from '@/api/adminUsers';
 import { showError } from '@/utils/swal';
 
 export function AdminPasswordResetPage() {
   const { t } = useTranslation(['common', 'validation']);
+  const [searchParams] = useSearchParams();
   const targetId = useId();
   const [targetUserId, setTargetUserId] = useState('');
   const [lastTempPassword, setLastTempPassword] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const uid = searchParams.get('userId');
+    if (uid) {
+      setTargetUserId(uid);
+    }
+  }, [searchParams]);
 
   return (
     <div className="mx-auto" style={{ maxWidth: '32rem' }}>

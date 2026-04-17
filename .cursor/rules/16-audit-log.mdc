@@ -1,0 +1,39 @@
+---
+description: 비즈니스 감사 로그(om_log_m) — 별도 코멘트 없이 변경 기능 구현 시 필수 연동
+alwaysApply: true
+---
+
+# 비즈니스 감사 로그 (`om_log_m`)
+
+## 적용 원칙
+
+- 사용자가 **매번 “감사 로그 남겨줘”라고 명시하지 않아도**, **비즈니스 데이터를 변경(INSERT/UPDATE/DELETE 및 이에 준하는 상태 반영)하는 기능**을 구현하거나 해당 로직을 수정할 때 **`om_log_m`에 증빙용 로그를 남기는 설계·구현을 포함**한다.
+- 스키마·컬럼 의미는 `docs/ddl/om_log.sql`을 따른다.
+
+## 기록 시점
+
+- **성공한 변경만** 기록한다. (실패·롤백된 시도는 애플리케이션 로그 등 별도 정책.)
+- 커밋 이후에만 DB에 남길 경우 `@TransactionalEventListener(phase = AFTER_COMMIT)` 등으로 본 처리와 분리하는 방식을 우선 검토한다.
+
+## 반드시 채울 수 있게 할 필드
+
+- **행위자**: `actor_user_id` (인증 사용자 식별자와 동일 체계).
+- **액션**: `action_cd` (안정적인 코드 값, 예: `COMMON_CODE_ITEM_UPDATE`).
+- **화면·메뉴**: 가능하면 `menu_cd` (`docs/guide/menu/` 메뉴 문서·코드와 맞출 것). API만으로 구분이 어려우면 클라이언트에서 `menu_cd` 또는 `client_path`를 넘기는 계약을 함께 설계한다.
+- **대상**: `resource_type`, `resource_id` (단일 키로 부족하면 `detail`에 복합 정보).
+- **조회·증빙 표시**: `message_key` + `detail`(예: `params`)로 `MessageSource`/`messages*.properties`와 연동하거나, 규정상 필요 시 `description_snapshot`에 기록 시점 고정 문구를 둔다. (`docs/guide/09-다국어-표준.md`)
+
+## 공통 처리(자동에 가깝게)
+
+- **요청 메타**: `request_id`, `api_path`, `http_method`, `ip_addr`, `user_agent` 등은 **필터·인터셉터·MDC** 등 한곳에서 수집해 감사 기록 헬퍼에 넘기는 방식을 기본으로 한다.
+- **도메인 의미**: `action_cd`, `menu_cd`, `resource_*`, `detail`은 **Service 계층의 성공 경로**(또는 AFTER_COMMIT 리스너)에서 채운다. HTTP 레이어만으로는 채우기 어렵다.
+
+## 금지·주의
+
+- 비밀번호, 토큰, 개인정보·결제 민감값을 `detail`·`description_snapshot`에 넣지 않는다. (`docs/guide/05-로깅-표준.md`, `docs/guide/06-보안-표준.md`)
+- 감사 테이블은 **append-only** 가정: 불필요한 UPDATE/DELETE를 설계에 포함하지 않는다.
+
+## 기타 표준
+
+- 트랜잭션 경계·읽기 전용 규칙: `docs/guide/11-트랜잭션-표준.md`
+- DB 네이밍·타입: `docs/guide/08-DB-표준.md`

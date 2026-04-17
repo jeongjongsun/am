@@ -1,14 +1,20 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AllCommunityModule } from 'ag-grid-community';
+import type { ColDef, ICellRendererParams } from 'ag-grid-community';
+import { AgGridProvider, AgGridReact } from 'ag-grid-react';
+import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-quartz.css';
 
 import {
   createCommonCodeGroup,
   createCommonCodeItem,
   fetchCommonCodeGroups,
   fetchCommonCodeItems,
-  saveCommonCodeDisplayOrder,
   updateCommonCodeRow,
   type CommonCodeGroupDto,
   type CommonCodeItemDto,
@@ -36,6 +42,29 @@ type ItemFormState = {
   useYn: 'Y' | 'N';
   dispSeq: string | number;
 } & NameFormFields;
+
+export type CommonGridRow = {
+  rowKey: string;
+  kind: 'GROUP' | 'ITEM';
+  groupId: string;
+  subCd?: string;
+  codeNm: Record<string, string>;
+  useYn: string;
+  dispSeq: number;
+  updatedAt?: string | null;
+  groupDto?: CommonCodeGroupDto;
+  itemDto?: CommonCodeItemDto;
+};
+
+export type CommonGridContext = {
+  expandedIds: string[];
+  toggleExpand: (groupId: string) => void;
+  openChildModal: (groupId: string) => void;
+  openEditGroup: (g: CommonCodeGroupDto) => void;
+  openEditItem: (groupId: string, item: CommonCodeItemDto) => void;
+  t: TFunction;
+  lang: string;
+};
 
 function emptyNameFields(): NameFormFields {
   return { nm_ko: '', nm_en: '', nm_ja: '', nm_vi: '' };
@@ -66,19 +95,136 @@ function namesFromRecord(codeNm: Record<string, string>): NameFormFields {
   };
 }
 
+function matchesText(hay: string, q: string): boolean {
+  return hay.toLowerCase().includes(q);
+}
+
+function groupMatchesQuery(g: CommonCodeGroupDto, q: string): boolean {
+  if (matchesText(g.groupId, q)) {
+    return true;
+  }
+  return Object.values(g.codeNm).some((v) => matchesText(v, q));
+}
+
+function itemMatchesQuery(it: CommonCodeItemDto, q: string): boolean {
+  if (matchesText(it.subCd, q)) {
+    return true;
+  }
+  return Object.values(it.codeNm).some((v) => matchesText(v, q));
+}
+
+/** AG Grid: 대분류 행에만 + / 하위 등록 */
+function GroupExpandCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
+  const data = props.data;
+  const ctx = props.context;
+  if (!data || data.kind !== 'GROUP' || !ctx) {
+    return null;
+  }
+  const open = ctx.expandedIds.includes(data.groupId);
+  return (
+    <div className="d-flex align-items-center gap-1 flex-nowrap">
+      <button
+        type="button"
+        className="btn btn-sm btn-default-visible py-0 px-2"
+        aria-expanded={open}
+        title={open ? ctx.t('common_code.collapse') : ctx.t('common_code.expand')}
+        onClick={() => ctx.toggleExpand(data.groupId)}
+      >
+        {open ? '−' : '+'}
+      </button>
+      <button
+        type="button"
+        className="btn btn-sm btn-primary py-0 px-2"
+        onClick={() => ctx.openChildModal(data.groupId)}
+      >
+        {ctx.t('common_code.add_child')}
+      </button>
+    </div>
+  );
+}
+
+function RowActionsCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
+  const data = props.data;
+  const ctx = props.context;
+  if (!data || !ctx) {
+    return null;
+  }
+  if (data.kind === 'GROUP' && data.groupDto) {
+    return (
+      <button
+        type="button"
+        className="btn btn-sm btn-default-visible"
+        onClick={() => ctx.openEditGroup(data.groupDto!)}
+      >
+        {ctx.t('common_code.edit')}
+      </button>
+    );
+  }
+  if (data.kind === 'ITEM' && data.itemDto) {
+    return (
+      <button
+        type="button"
+        className="btn btn-sm btn-default-visible"
+        onClick={() => ctx.openEditItem(data.groupId, data.itemDto!)}
+      >
+        {ctx.t('common_code.edit')}
+      </button>
+    );
+  }
+  return null;
+}
+
+function KindCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
+  const ctx = props.context;
+  const k = props.data?.kind;
+  if (!ctx) {
+    return null;
+  }
+  return <span className="small">{k === 'GROUP' ? ctx.t('common_code.kind_group') : ctx.t('common_code.kind_item')}</span>;
+}
+
+function CodeCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
+  const d = props.data;
+  const ctx = props.context;
+  if (!d || !ctx) {
+    return null;
+  }
+  const text = d.kind === 'GROUP' ? d.groupId : (d.subCd ?? '');
+  const pad = d.kind === 'ITEM' ? { paddingLeft: '1.25rem' } : undefined;
+  return (
+    <code className="small" style={pad}>
+      {text}
+    </code>
+  );
+}
+
+function LabelCell(props: ICellRendererParams<CommonGridRow, unknown, CommonGridContext>) {
+  const d = props.data;
+  const ctx = props.context;
+  if (!d || !ctx) {
+    return null;
+  }
+  return <span className="small text-body">{labelForLocale(d.codeNm, ctx.lang)}</span>;
+}
+
 export function CommonCodeAdminPage() {
   const { t, i18n } = useTranslation('common');
   const queryClient = useQueryClient();
   const { data: meRes } = useAuthMe();
   const isAdmin = meRes?.success === true && meRes.data?.gradeCd === 'ADMIN';
 
-  const [groupFilter, setGroupFilter] = useState('');
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [orderSubCds, setOrderSubCds] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
 
-  const [panel, setPanel] = useState<
-    'none' | 'newGroup' | 'editGroup' | 'newItem' | 'editItem'
-  >('none');
+  const [modal, setModal] = useState<
+    | { type: 'none' }
+    | { type: 'newGroup' }
+    | { type: 'editGroup'; group: CommonCodeGroupDto }
+    | { type: 'newItem'; groupId: string }
+    | { type: 'editItem'; groupId: string; item: CommonCodeItemDto }
+  >({ type: 'none' });
+
   const [groupForm, setGroupForm] = useState<GroupFormState>({
     groupId: '',
     useYn: 'Y',
@@ -92,84 +238,266 @@ export function CommonCodeAdminPage() {
     ...emptyNameFields(),
   });
 
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
+    return () => window.clearTimeout(id);
+  }, [searchInput]);
+
   const groupsQuery = useQuery({
     queryKey: ['admin', 'common-codes', 'groups'],
     queryFn: fetchCommonCodeGroups,
     enabled: isAdmin,
   });
 
-  const itemsQuery = useQuery({
-    queryKey: ['admin', 'common-codes', 'items', selectedGroupId],
-    queryFn: () => fetchCommonCodeItems(selectedGroupId!),
-    enabled: isAdmin && !!selectedGroupId,
+  const groups = useMemo(
+    () => (groupsQuery.data?.success ? (groupsQuery.data.data ?? []) : []),
+    [groupsQuery.data],
+  );
+
+  const groupIds = useMemo(() => groups.map((g) => g.groupId), [groups]);
+
+  const itemQueries = useQueries({
+    queries: groupIds.map((gid) => ({
+      queryKey: ['admin', 'common-codes', 'items', gid],
+      queryFn: () => fetchCommonCodeItems(gid),
+      enabled: isAdmin && expandedIds.includes(gid),
+      staleTime: 60_000,
+    })),
   });
 
-  const items = itemsQuery.data?.success ? (itemsQuery.data.data ?? []) : [];
-
-  useEffect(() => {
-    if (!itemsQuery.data?.success || !itemsQuery.data.data) {
-      setOrderSubCds([]);
-      return;
-    }
-    const sorted = [...itemsQuery.data.data].sort(
-      (a, b) => a.dispSeq - b.dispSeq || a.subCd.localeCompare(b.subCd),
-    );
-    setOrderSubCds(sorted.map((r) => r.subCd));
-  }, [itemsQuery.data, selectedGroupId]);
-
-  const itemBySubCd = useMemo(() => {
-    const m = new Map<string, CommonCodeItemDto>();
-    for (const row of items) {
-      m.set(row.subCd, row);
-    }
-    return m;
-  }, [items]);
-
-  const orderedItems: CommonCodeItemDto[] = useMemo(() => {
-    const out: CommonCodeItemDto[] = [];
-    for (const sub of orderSubCds) {
-      const row = itemBySubCd.get(sub);
-      if (row) {
-        out.push(row);
+  const expandedItemsMap = useMemo(() => {
+    const m: Record<string, CommonCodeItemDto[]> = {};
+    groupIds.forEach((gid, i) => {
+      if (!expandedIds.includes(gid)) {
+        return;
       }
-    }
-    return out;
-  }, [orderSubCds, itemBySubCd]);
-
-  const filteredGroups = useMemo(() => {
-    const list = groupsQuery.data?.success ? (groupsQuery.data.data ?? []) : [];
-    const q = groupFilter.trim().toLowerCase();
-    if (!q) {
-      return list;
-    }
-    return list.filter((g) => {
-      const idHit = g.groupId.toLowerCase().includes(q);
-      const nmHit = Object.values(g.codeNm).some((v) => v.toLowerCase().includes(q));
-      return idHit || nmHit;
+      const res = itemQueries[i]?.data;
+      if (res?.success && res.data) {
+        m[gid] = res.data;
+      }
     });
-  }, [groupsQuery.data, groupFilter]);
+    return m;
+  }, [groupIds, expandedIds, itemQueries]);
 
-  const openNewGroup = () => {
+  const searchItemsQuery = useQuery({
+    queryKey: ['admin', 'common-codes', 'search-items', debouncedSearch],
+    queryFn: async () => {
+      const gRes = await fetchCommonCodeGroups();
+      const glist = gRes.success && gRes.data ? gRes.data : [];
+      const out: Record<string, CommonCodeItemDto[]> = {};
+      for (const g of glist) {
+        const res = await fetchCommonCodeItems(g.groupId);
+        out[g.groupId] = res.success && res.data ? res.data : [];
+      }
+      return out;
+    },
+    enabled: isAdmin && debouncedSearch.length > 0,
+  });
+
+  const searchItemsMap = searchItemsQuery.data ?? {};
+
+  const toggleExpand = useCallback((groupId: string) => {
+    setExpandedIds((prev) =>
+      prev.includes(groupId) ? prev.filter((x) => x !== groupId) : [...prev, groupId],
+    );
+  }, []);
+
+  const openChildModal = useCallback((groupId: string) => {
+    setItemForm({
+      subCd: '',
+      useYn: 'Y',
+      dispSeq: '',
+      ...emptyNameFields(),
+    });
+    setModal({ type: 'newItem', groupId });
+  }, []);
+
+  const openEditGroup = useCallback((group: CommonCodeGroupDto) => {
+    setGroupForm({
+      groupId: group.groupId,
+      useYn: group.useYn === 'N' ? 'N' : 'Y',
+      dispSeq: group.dispSeq,
+      ...namesFromRecord(group.codeNm),
+    });
+    setModal({ type: 'editGroup', group });
+  }, []);
+
+  const openEditItem = useCallback((groupId: string, item: CommonCodeItemDto) => {
+    setItemForm({
+      subCd: item.subCd,
+      useYn: item.useYn === 'N' ? 'N' : 'Y',
+      dispSeq: item.dispSeq,
+      ...namesFromRecord(item.codeNm),
+    });
+    setModal({ type: 'editItem', groupId, item });
+  }, []);
+
+  const openNewGroupModal = useCallback(() => {
     setGroupForm({
       groupId: '',
       useYn: 'Y',
       dispSeq: '',
       ...emptyNameFields(),
     });
-    setPanel('newGroup');
-  };
+    setModal({ type: 'newGroup' });
+  }, []);
 
-  const openEditGroup = (g: CommonCodeGroupDto) => {
-    setGroupForm({
-      groupId: g.groupId,
-      useYn: g.useYn === 'N' ? 'N' : 'Y',
-      dispSeq: g.dispSeq,
-      ...namesFromRecord(g.codeNm),
-    });
-    setPanel('editGroup');
-  };
+  const closeModal = useCallback(() => setModal({ type: 'none' }), []);
 
-  const closePanel = () => setPanel('none');
+  const gridContext = useMemo<CommonGridContext>(
+    () => ({
+      expandedIds,
+      toggleExpand,
+      openChildModal,
+      openEditGroup,
+      openEditItem,
+      t,
+      lang: i18n.language,
+    }),
+    [expandedIds, toggleExpand, openChildModal, openEditGroup, openEditItem, t, i18n.language],
+  );
+
+  const rowData = useMemo((): CommonGridRow[] => {
+    const q = debouncedSearch.toLowerCase();
+    const sortedGroups = [...groups].sort(
+      (a, b) => a.dispSeq - b.dispSeq || a.groupId.localeCompare(b.groupId),
+    );
+    const rows: CommonGridRow[] = [];
+
+    for (const g of sortedGroups) {
+      const itemsForSearch = q ? (searchItemsMap[g.groupId] ?? []) : [];
+      const itemsForExpand = expandedItemsMap[g.groupId] ?? [];
+      const groupHit = !q || groupMatchesQuery(g, q);
+      const anyChildHit =
+        q && itemsForSearch.some((it) => itemMatchesQuery(it, q));
+
+      if (q && !groupHit && !anyChildHit) {
+        continue;
+      }
+
+      rows.push({
+        rowKey: `G:${g.groupId}`,
+        kind: 'GROUP',
+        groupId: g.groupId,
+        codeNm: g.codeNm,
+        useYn: g.useYn,
+        dispSeq: g.dispSeq,
+        updatedAt: null,
+        groupDto: g,
+      });
+
+      const showChildren = q
+        ? groupHit || anyChildHit
+        : expandedIds.includes(g.groupId);
+      if (!showChildren) {
+        continue;
+      }
+
+      const sourceItems = q ? itemsForSearch : itemsForExpand;
+      const sortedItems = [...sourceItems].sort(
+        (a, b) => a.dispSeq - b.dispSeq || a.subCd.localeCompare(b.subCd),
+      );
+
+      for (const it of sortedItems) {
+        if (q && !groupHit && !itemMatchesQuery(it, q)) {
+          continue;
+        }
+        rows.push({
+          rowKey: `I:${g.groupId}:${it.subCd}`,
+          kind: 'ITEM',
+          groupId: g.groupId,
+          subCd: it.subCd,
+          codeNm: it.codeNm,
+          useYn: it.useYn,
+          dispSeq: it.dispSeq,
+          updatedAt: it.updatedAt,
+          itemDto: it,
+        });
+      }
+    }
+    return rows;
+  }, [
+    groups,
+    debouncedSearch,
+    expandedIds,
+    expandedItemsMap,
+    searchItemsMap,
+  ]);
+
+  const columnDefs = useMemo<ColDef<CommonGridRow>[]>(
+    () => [
+      {
+        colId: 'expand',
+        headerName: t('common_code.col_expand'),
+        width: 168,
+        minWidth: 168,
+        maxWidth: 200,
+        pinned: 'left',
+        sortable: false,
+        filter: false,
+        cellRenderer: GroupExpandCell,
+      },
+      {
+        colId: 'kind',
+        headerName: t('common_code.col_kind'),
+        width: 88,
+        sortable: false,
+        cellRenderer: KindCell,
+      },
+      {
+        colId: 'parentGroup',
+        headerName: t('common_code.col_parent_group'),
+        flex: 1,
+        minWidth: 120,
+        valueGetter: (p) => p.data?.groupId ?? '',
+      },
+      {
+        colId: 'code',
+        headerName: t('common_code.col_code'),
+        flex: 1,
+        minWidth: 140,
+        cellRenderer: CodeCell,
+      },
+      {
+        colId: 'label',
+        headerName: t('common_code.col_label'),
+        flex: 1.4,
+        minWidth: 160,
+        cellRenderer: LabelCell,
+      },
+      {
+        field: 'useYn',
+        headerName: t('common_code.col_use'),
+        width: 80,
+        maxWidth: 100,
+      },
+      {
+        field: 'dispSeq',
+        headerName: t('common_code.col_disp'),
+        width: 88,
+        maxWidth: 110,
+      },
+      {
+        colId: 'actions',
+        headerName: t('common_code.col_actions'),
+        width: 100,
+        pinned: 'right',
+        sortable: false,
+        filter: false,
+        cellRenderer: RowActionsCell,
+      },
+    ],
+    [t],
+  );
+
+  const defaultColDef = useMemo<ColDef<CommonGridRow>>(
+    () => ({
+      sortable: true,
+      resizable: true,
+      suppressHeaderMenuButton: true,
+    }),
+    [],
+  );
 
   const onSaveGroup = async () => {
     const codeNm = codeNmFromNameFields(groupForm);
@@ -177,7 +505,7 @@ export function CommonCodeAdminPage() {
       await showError(t('common_code.error_title'), t('common_code.validation_name_required'));
       return;
     }
-    if (panel === 'newGroup') {
+    if (modal.type === 'newGroup') {
       const gid = groupForm.groupId.trim();
       if (!gid) {
         await showError(t('common_code.error_title'), t('common_code.validation_group_id'));
@@ -198,10 +526,11 @@ export function CommonCodeAdminPage() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'groups'] });
-      closePanel();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'search-items'] });
+      closeModal();
       return;
     }
-    if (panel === 'editGroup') {
+    if (modal.type === 'editGroup') {
       const disp = Number(groupForm.dispSeq);
       if (!Number.isFinite(disp)) {
         await showError(t('common_code.error_title'), t('common_code.validation_disp_seq'));
@@ -217,43 +546,22 @@ export function CommonCodeAdminPage() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'groups'] });
-      closePanel();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'search-items'] });
+      closeModal();
     }
-  };
-
-  const openNewItem = () => {
-    if (!selectedGroupId) {
-      return;
-    }
-    setItemForm({
-      subCd: '',
-      useYn: 'Y',
-      dispSeq: '',
-      ...emptyNameFields(),
-    });
-    setPanel('newItem');
-  };
-
-  const openEditItem = (row: CommonCodeItemDto) => {
-    setItemForm({
-      subCd: row.subCd,
-      useYn: row.useYn === 'N' ? 'N' : 'Y',
-      dispSeq: row.dispSeq,
-      ...namesFromRecord(row.codeNm),
-    });
-    setPanel('editItem');
   };
 
   const onSaveItem = async () => {
-    if (!selectedGroupId) {
+    if (modal.type !== 'newItem' && modal.type !== 'editItem') {
       return;
     }
+    const gid = modal.groupId;
     const codeNm = codeNmFromNameFields(itemForm);
     if (!Object.keys(codeNm).length) {
       await showError(t('common_code.error_title'), t('common_code.validation_name_required'));
       return;
     }
-    if (panel === 'newItem') {
+    if (modal.type === 'newItem') {
       const sub = itemForm.subCd.trim();
       if (!sub) {
         await showError(t('common_code.error_title'), t('common_code.validation_sub_cd'));
@@ -261,7 +569,7 @@ export function CommonCodeAdminPage() {
       }
       const dispRaw =
         itemForm.dispSeq === '' || itemForm.dispSeq === null ? undefined : Number(itemForm.dispSeq);
-      const res = await createCommonCodeItem(selectedGroupId, {
+      const res = await createCommonCodeItem(gid, {
         subCd: sub,
         codeNm,
         useYn: itemForm.useYn,
@@ -271,54 +579,44 @@ export function CommonCodeAdminPage() {
         await showError(t('common_code.error_title'), res.message ?? t('common_code.error_default'));
         return;
       }
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'items', selectedGroupId] });
-      closePanel();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'items', gid] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'search-items'] });
+      if (!expandedIds.includes(gid)) {
+        setExpandedIds((p) => [...p, gid]);
+      }
+      closeModal();
       return;
     }
-    if (panel === 'editItem') {
-      const disp = Number(itemForm.dispSeq);
-      if (!Number.isFinite(disp)) {
-        await showError(t('common_code.error_title'), t('common_code.validation_disp_seq'));
-        return;
-      }
-      const res = await updateCommonCodeRow(selectedGroupId, itemForm.subCd.trim(), {
-        codeNm,
-        useYn: itemForm.useYn,
-        dispSeq: disp,
-      });
-      if (!res.success) {
-        await showError(t('common_code.error_title'), res.message ?? t('common_code.error_default'));
-        return;
-      }
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'items', selectedGroupId] });
-      closePanel();
+    const disp = Number(itemForm.dispSeq);
+    if (!Number.isFinite(disp)) {
+      await showError(t('common_code.error_title'), t('common_code.validation_disp_seq'));
+      return;
     }
-  };
-
-  const moveItem = useCallback((subCd: string, dir: -1 | 1) => {
-    setOrderSubCds((prev) => {
-      const i = prev.indexOf(subCd);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= prev.length) {
-        return prev;
-      }
-      const next = [...prev];
-      [next[i], next[j]] = [next[j], next[i]];
-      return next;
+    const res = await updateCommonCodeRow(gid, itemForm.subCd.trim(), {
+      codeNm,
+      useYn: itemForm.useYn,
+      dispSeq: disp,
     });
-  }, []);
-
-  const onSaveOrder = async () => {
-    if (!selectedGroupId || !orderSubCds.length) {
-      return;
-    }
-    const res = await saveCommonCodeDisplayOrder(selectedGroupId, orderSubCds);
     if (!res.success) {
       await showError(t('common_code.error_title'), res.message ?? t('common_code.error_default'));
       return;
     }
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'items', selectedGroupId] });
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'items', gid] });
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'common-codes', 'search-items'] });
+    closeModal();
   };
+
+  const modalOpen = modal.type !== 'none';
+  const modalTitle =
+    modal.type === 'newGroup'
+      ? t('common_code.panel_new_group')
+      : modal.type === 'editGroup'
+        ? t('common_code.panel_edit_group')
+        : modal.type === 'newItem'
+          ? t('common_code.panel_new_item')
+          : modal.type === 'editItem'
+            ? t('common_code.panel_edit_item')
+            : '';
 
   if (!isAdmin) {
     return (
@@ -333,312 +631,201 @@ export function CommonCodeAdminPage() {
   }
 
   return (
-    <div className="py-3">
-      <h1 className="h4 mb-2">{t('common_code.page_title')}</h1>
-      <p className="text-body-secondary small mb-4">{t('common_code.lead')}</p>
+    <AgGridProvider modules={[AllCommunityModule]}>
+      <div className="py-3">
+        <div className="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h1 className="h4 mb-1">{t('common_code.page_title')}</h1>
+            <p className="text-body-secondary small mb-0">{t('common_code.lead_grid')}</p>
+          </div>
+          <div className="d-flex flex-wrap gap-2 align-items-center">
+            <button type="button" className="btn btn-sm btn-primary" onClick={openNewGroupModal}>
+              {t('common_code.add_top_group')}
+            </button>
+          </div>
+        </div>
 
-      <div className="row g-3">
-        <div className="col-lg-4">
-          <div className="card border shadow-sm h-100">
-            <div className="card-header bg-body-secondary d-flex justify-content-between align-items-center py-2">
-              <span className="fw-semibold small">{t('common_code.groups_title')}</span>
-              <button type="button" className="btn btn-sm btn-primary" onClick={openNewGroup}>
-                {t('common_code.add_group')}
-              </button>
+        <div className="card border shadow-sm mb-3">
+          <div className="card-body py-3">
+            <div className="row g-2 align-items-end">
+              <div className="col-md-8 col-lg-9">
+                <label className="form-label small mb-1" htmlFor="cc-search">
+                  {t('common_code.search_label')}
+                </label>
+                <input
+                  id="cc-search"
+                  type="search"
+                  className="form-control form-control-sm"
+                  placeholder={t('common_code.search_placeholder')}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="col-md-4 col-lg-3 text-md-end">
+                {debouncedSearch && searchItemsQuery.isFetching ? (
+                  <span className="small text-body-secondary">{t('common_code.search_loading')}</span>
+                ) : null}
+              </div>
             </div>
-            <div className="card-body py-2">
-              <input
-                type="search"
-                className="form-control form-control-sm mb-2"
-                placeholder={t('common_code.search_groups')}
-                value={groupFilter}
-                onChange={(e) => setGroupFilter(e.target.value)}
-                aria-label={t('common_code.search_groups')}
-              />
-              {groupsQuery.isPending ? (
-                <div className="small text-body-secondary">{t('common_code.loading')}</div>
-              ) : groupsQuery.isError ? (
-                <div className="small text-danger">{t('common_code.load_error')}</div>
-              ) : (
-                <div className="list-group list-group-flush">
-                  {filteredGroups.map((g) => (
-                    <div
-                      key={g.groupId}
-                      className={`list-group-item px-2 py-2 ${selectedGroupId === g.groupId ? 'active' : ''}`}
-                    >
-                      <div className="d-flex justify-content-between align-items-start gap-2">
-                        <button
-                          type="button"
-                          className={`btn btn-link text-start text-decoration-none p-0 flex-grow-1 ${selectedGroupId === g.groupId ? 'text-white' : ''}`}
-                          onClick={() => {
-                            setSelectedGroupId(g.groupId);
-                            setPanel('none');
-                          }}
-                        >
-                          <div className="fw-semibold small">{g.groupId}</div>
-                          <div
-                            className={`small ${selectedGroupId === g.groupId ? 'text-white-50' : 'text-body-secondary'}`}
+          </div>
+        </div>
+
+        <div className="ag-theme-quartz border rounded overflow-hidden" style={{ width: '100%', height: 'min(70vh, 640px)' }}>
+          <AgGridReact<CommonGridRow>
+            rowData={rowData}
+            columnDefs={columnDefs}
+            defaultColDef={defaultColDef}
+            context={gridContext}
+            getRowId={(p) => p.data.rowKey}
+            animateRows
+            domLayout="normal"
+          />
+        </div>
+
+        {modalOpen ? (
+          <>
+            <div
+              className="modal fade show d-block"
+              tabIndex={-1}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="cc-modal-title"
+            >
+              <div className="modal-dialog modal-lg modal-dialog-scrollable">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h2 className="modal-title h5" id="cc-modal-title">
+                      {modalTitle}
+                    </h2>
+                    <button type="button" className="btn-close" aria-label={t('common_code.close')} onClick={closeModal} />
+                  </div>
+                  <div className="modal-body">
+                    {(modal.type === 'newGroup' || modal.type === 'editGroup') && (
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <label className="form-label small" htmlFor="ccf-group-id">
+                            {t('common_code.field_group_id')}
+                          </label>
+                          <input
+                            id="ccf-group-id"
+                            className="form-control form-control-sm"
+                            disabled={modal.type === 'editGroup'}
+                            value={groupForm.groupId}
+                            onChange={(e) => setGroupForm((s) => ({ ...s, groupId: e.target.value }))}
+                          />
+                        </div>
+                        <div className="col-md-3">
+                          <label className="form-label small">{t('common_code.field_use_yn')}</label>
+                          <select
+                            className="form-select form-select-sm"
+                            value={groupForm.useYn}
+                            onChange={(e) =>
+                              setGroupForm((s) => ({ ...s, useYn: e.target.value === 'N' ? 'N' : 'Y' }))
+                            }
                           >
-                            {labelForLocale(g.codeNm, i18n.language)}
+                            <option value="Y">Y</option>
+                            <option value="N">N</option>
+                          </select>
+                        </div>
+                        <div className="col-md-3">
+                          <label className="form-label small">{t('common_code.field_disp_seq')}</label>
+                          <input
+                            type="number"
+                            className="form-control form-control-sm"
+                            value={groupForm.dispSeq}
+                            onChange={(e) => setGroupForm((s) => ({ ...s, dispSeq: e.target.value }))}
+                          />
+                        </div>
+                        {NAME_KEYS.map((k) => (
+                          <div className="col-md-6" key={k}>
+                            <label className="form-label small text-uppercase">{k}</label>
+                            <input
+                              className="form-control form-control-sm"
+                              value={groupForm[`nm_${k}`]}
+                              onChange={(e) => setGroupForm((s) => ({ ...s, [`nm_${k}`]: e.target.value }))}
+                            />
                           </div>
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm btn-default-visible ${selectedGroupId === g.groupId ? 'border-light text-white' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditGroup(g);
-                          }}
-                        >
-                          {t('common_code.edit')}
-                        </button>
+                        ))}
                       </div>
-                    </div>
-                  ))}
-                  {filteredGroups.length === 0 ? (
-                    <div className="small text-body-secondary py-2">{t('common_code.no_groups')}</div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="col-lg-8">
-          {!selectedGroupId ? (
-            <div className="card border shadow-sm">
-              <div className="card-body text-body-secondary small">{t('common_code.select_group_hint')}</div>
-            </div>
-          ) : (
-            <div className="card border shadow-sm">
-              <div className="card-header bg-body-secondary d-flex flex-wrap gap-2 justify-content-between align-items-center py-2">
-                <span className="fw-semibold small">
-                  {t('common_code.items_title', { id: selectedGroupId })}
-                </span>
-                <div className="d-flex flex-wrap gap-2">
-                  <button type="button" className="btn btn-sm btn-default-visible" onClick={onSaveOrder}>
-                    {t('common_code.save_order')}
-                  </button>
-                  <button type="button" className="btn btn-sm btn-primary" onClick={openNewItem}>
-                    {t('common_code.add_item')}
-                  </button>
-                </div>
-              </div>
-              <div className="table-responsive">
-                <table className="table table-sm table-hover mb-0 align-middle">
-                  <thead className="table-light">
-                    <tr>
-                      <th scope="col" className="small">
-                        {t('common_code.col_order')}
-                      </th>
-                      <th scope="col" className="small">
-                        {t('common_code.col_sub_cd')}
-                      </th>
-                      <th scope="col" className="small">
-                        {t('common_code.col_label')}
-                      </th>
-                      <th scope="col" className="small">
-                        {t('common_code.col_use')}
-                      </th>
-                      <th scope="col" className="small">
-                        {t('common_code.col_disp')}
-                      </th>
-                      <th scope="col" className="small">
-                        {t('common_code.col_actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {itemsQuery.isPending ? (
-                      <tr>
-                        <td colSpan={6} className="small text-body-secondary px-3 py-3">
-                          {t('common_code.loading')}
-                        </td>
-                      </tr>
-                    ) : orderedItems.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="small text-body-secondary px-3 py-3">
-                          {t('common_code.no_items')}
-                        </td>
-                      </tr>
-                    ) : (
-                      orderedItems.map((row) => (
-                        <tr key={row.subCd}>
-                          <td className="text-nowrap">
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-default-visible py-0 me-1"
-                              aria-label={t('common_code.move_up')}
-                              onClick={() => moveItem(row.subCd, -1)}
-                            >
-                              ↑
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-default-visible py-0"
-                              aria-label={t('common_code.move_down')}
-                              onClick={() => moveItem(row.subCd, 1)}
-                            >
-                              ↓
-                            </button>
-                          </td>
-                          <td>
-                            <code className="small">{row.subCd}</code>
-                          </td>
-                          <td className="small">{labelForLocale(row.codeNm, i18n.language)}</td>
-                          <td className="small">{row.useYn}</td>
-                          <td className="small">{row.dispSeq}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-default-visible"
-                              onClick={() => openEditItem(row)}
-                            >
-                              {t('common_code.edit')}
-                            </button>
-                          </td>
-                        </tr>
-                      ))
                     )}
-                  </tbody>
-                </table>
+
+                    {(modal.type === 'newItem' || modal.type === 'editItem') && (
+                      <div className="row g-3">
+                        <div className="col-12">
+                          <p className="small text-body-secondary mb-0">
+                            {t('common_code.modal_item_parent', { id: modal.groupId })}
+                          </p>
+                        </div>
+                        <div className="col-md-6">
+                          <label className="form-label small" htmlFor="ccf-item-sub">
+                            {t('common_code.field_sub_cd')}
+                          </label>
+                          <input
+                            id="ccf-item-sub"
+                            className="form-control form-control-sm"
+                            disabled={modal.type === 'editItem'}
+                            value={itemForm.subCd}
+                            onChange={(e) => setItemForm((s) => ({ ...s, subCd: e.target.value }))}
+                          />
+                        </div>
+                        <div className="col-md-3">
+                          <label className="form-label small">{t('common_code.field_use_yn')}</label>
+                          <select
+                            className="form-select form-select-sm"
+                            value={itemForm.useYn}
+                            onChange={(e) =>
+                              setItemForm((s) => ({ ...s, useYn: e.target.value === 'N' ? 'N' : 'Y' }))
+                            }
+                          >
+                            <option value="Y">Y</option>
+                            <option value="N">N</option>
+                          </select>
+                        </div>
+                        <div className="col-md-3">
+                          <label className="form-label small">{t('common_code.field_disp_seq')}</label>
+                          <input
+                            type="number"
+                            className="form-control form-control-sm"
+                            value={itemForm.dispSeq}
+                            onChange={(e) => setItemForm((s) => ({ ...s, dispSeq: e.target.value }))}
+                          />
+                        </div>
+                        {NAME_KEYS.map((k) => (
+                          <div className="col-md-6" key={`i-${k}`}>
+                            <label className="form-label small text-uppercase">{k}</label>
+                            <input
+                              className="form-control form-control-sm"
+                              value={itemForm[`nm_${k}`]}
+                              onChange={(e) => setItemForm((s) => ({ ...s, [`nm_${k}`]: e.target.value }))}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-sm btn-default-visible" onClick={closeModal}>
+                      {t('common_code.cancel')}
+                    </button>
+                    {modal.type === 'newGroup' || modal.type === 'editGroup' ? (
+                      <button type="button" className="btn btn-sm btn-primary" onClick={onSaveGroup}>
+                        {t('common_code.save')}
+                      </button>
+                    ) : null}
+                    {modal.type === 'newItem' || modal.type === 'editItem' ? (
+                      <button type="button" className="btn btn-sm btn-primary" onClick={onSaveItem}>
+                        {t('common_code.save')}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+            <div className="modal-backdrop fade show" aria-hidden="true" />
+          </>
+        ) : null}
       </div>
-
-      {panel !== 'none' ? (
-        <div className="card border shadow-sm mt-4">
-          <div className="card-header d-flex justify-content-between align-items-center py-2">
-            <span className="fw-semibold small">
-              {panel === 'newGroup'
-                ? t('common_code.panel_new_group')
-                : panel === 'editGroup'
-                  ? t('common_code.panel_edit_group')
-                  : panel === 'newItem'
-                    ? t('common_code.panel_new_item')
-                    : t('common_code.panel_edit_item')}
-            </span>
-            <button type="button" className="btn-close" aria-label={t('common_code.close')} onClick={closePanel} />
-          </div>
-          <div className="card-body">
-            {(panel === 'newGroup' || panel === 'editGroup') && (
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label small" htmlFor="ccf-group-id">
-                    {t('common_code.field_group_id')}
-                  </label>
-                  <input
-                    id="ccf-group-id"
-                    className="form-control form-control-sm"
-                    disabled={panel === 'editGroup'}
-                    value={groupForm.groupId}
-                    onChange={(e) => setGroupForm((s) => ({ ...s, groupId: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label small">{t('common_code.field_use_yn')}</label>
-                  <select
-                    className="form-select form-select-sm"
-                    value={groupForm.useYn}
-                    onChange={(e) =>
-                      setGroupForm((s) => ({ ...s, useYn: e.target.value === 'N' ? 'N' : 'Y' }))
-                    }
-                  >
-                    <option value="Y">Y</option>
-                    <option value="N">N</option>
-                  </select>
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label small">{t('common_code.field_disp_seq')}</label>
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    value={groupForm.dispSeq}
-                    onChange={(e) => setGroupForm((s) => ({ ...s, dispSeq: e.target.value }))}
-                  />
-                </div>
-                {NAME_KEYS.map((k) => (
-                  <div className="col-md-6" key={k}>
-                    <label className="form-label small text-uppercase">{k}</label>
-                    <input
-                      className="form-control form-control-sm"
-                      value={groupForm[`nm_${k}`]}
-                      onChange={(e) => setGroupForm((s) => ({ ...s, [`nm_${k}`]: e.target.value }))}
-                    />
-                  </div>
-                ))}
-                <div className="col-12 d-flex gap-2">
-                  <button type="button" className="btn btn-sm btn-primary" onClick={onSaveGroup}>
-                    {t('common_code.save')}
-                  </button>
-                  <button type="button" className="btn btn-sm btn-default-visible" onClick={closePanel}>
-                    {t('common_code.cancel')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {(panel === 'newItem' || panel === 'editItem') && (
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label small" htmlFor="ccf-item-sub">
-                    {t('common_code.field_sub_cd')}
-                  </label>
-                  <input
-                    id="ccf-item-sub"
-                    className="form-control form-control-sm"
-                    disabled={panel === 'editItem'}
-                    value={itemForm.subCd}
-                    onChange={(e) => setItemForm((s) => ({ ...s, subCd: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label small">{t('common_code.field_use_yn')}</label>
-                  <select
-                    className="form-select form-select-sm"
-                    value={itemForm.useYn}
-                    onChange={(e) =>
-                      setItemForm((s) => ({ ...s, useYn: e.target.value === 'N' ? 'N' : 'Y' }))
-                    }
-                  >
-                    <option value="Y">Y</option>
-                    <option value="N">N</option>
-                  </select>
-                </div>
-                <div className="col-md-3">
-                  <label className="form-label small">{t('common_code.field_disp_seq')}</label>
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    value={itemForm.dispSeq}
-                    onChange={(e) => setItemForm((s) => ({ ...s, dispSeq: e.target.value }))}
-                  />
-                </div>
-                {NAME_KEYS.map((k) => (
-                  <div className="col-md-6" key={`i-${k}`}>
-                    <label className="form-label small text-uppercase">{k}</label>
-                    <input
-                      className="form-control form-control-sm"
-                      value={itemForm[`nm_${k}`]}
-                      onChange={(e) => setItemForm((s) => ({ ...s, [`nm_${k}`]: e.target.value }))}
-                    />
-                  </div>
-                ))}
-                <div className="col-12 d-flex gap-2">
-                  <button type="button" className="btn btn-sm btn-primary" onClick={onSaveItem}>
-                    {t('common_code.save')}
-                  </button>
-                  <button type="button" className="btn btn-sm btn-default-visible" onClick={closePanel}>
-                    {t('common_code.cancel')}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : null}
-    </div>
+    </AgGridProvider>
   );
 }

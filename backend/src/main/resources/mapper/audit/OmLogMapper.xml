@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.am.backoffice.mapper.OmLogMapper">
+
+  <insert id="insertBusinessAudit">
+    INSERT INTO om_log_m (
+        actor_user_id,
+        menu_cd,
+        action_cd,
+        message_key,
+        resource_type,
+        resource_id,
+        detail,
+        request_id,
+        client_path,
+        http_method,
+        api_path,
+        ip_addr,
+        user_agent
+    ) VALUES (
+        #{actorUserId},
+        #{menuCd},
+        #{actionCd},
+        #{messageKey},
+        #{resourceType},
+        #{resourceId},
+        CAST(#{detailJson} AS jsonb),
+        #{requestId},
+        #{clientPath},
+        #{httpMethod},
+        #{apiPath},
+        #{ipAddr},
+        #{userAgent}
+    )
+  </insert>
+
+</mapper>

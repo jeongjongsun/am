@@ -51,6 +51,7 @@
     "lead": "코드 그룹과 코드값을 등록·수정합니다. 삭제는 제공하지 않으며 비활성은 사용 여부 N으로 처리합니다. (ADMIN 전용)",
     "add_top_group": "대분류 등록",
     "search_label": "검색",
+    "search_floating_label": "코드 또는 코드명",
     "search_placeholder": "공통코드(그룹 ID·코드값) 또는 코드명으로 검색",
     "search_loading": "하위 코드를 불러오는 중…",
     "expand": "하위 코드 펼치기",
@@ -118,6 +119,8 @@
   },
   "corporations_page": {
     "title": "화주(법인) 정보",
+    "save_error_title": "저장 실패",
+    "save_error_default": "저장할 수 없습니다. 입력값이나 권한을 확인하세요.",
     "forbidden": "등급 ADMIN 만 이 화면을 사용할 수 있습니다.",
     "active_yes": "사용",
     "active_no": "중지",

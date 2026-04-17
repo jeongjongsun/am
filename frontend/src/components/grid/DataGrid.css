@@ -1,0 +1,351 @@
+/* OM(github.com/jeongjongsun/om) frontend/src/components/grid/DataGrid.css 와 동일 */
+
+.data-grid-wrapper {
+  /* 그리드 외곽·푸터·내장 페이징 구분선 통일 (AG 루트와 컨테이너 이중선 방지) */
+  --data-grid-chrome-border: 1px solid var(--ag-border-color, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 그리드 영역 타이포 통일 (툴바 버튼은 테마 btn 크기 유지) */
+.data-grid-wrapper .ag-root-wrapper {
+  font-family: var(--phoenix-font-sans-serif, inherit);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.data-grid-wrapper .ag-header,
+.data-grid-wrapper .ag-header-group-cell,
+.data-grid-wrapper .ag-header-cell,
+.data-grid-wrapper .ag-cell,
+.data-grid-wrapper .ag-full-width-row .ag-cell-wrapper,
+.data-grid-wrapper .ag-floating-filter,
+.data-grid-wrapper .ag-floating-filter input,
+.data-grid-wrapper .ag-floating-filter button {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.data-grid-wrapper .ag-header-cell-text,
+.data-grid-wrapper .ag-header-group-cell-label {
+  font-weight: 500 !important;
+}
+
+/* 셀·헤더 수직 가운데 정렬 */
+.data-grid-wrapper .ag-header-cell,
+.data-grid-wrapper .ag-header-group-cell {
+  display: flex;
+  align-items: center;
+}
+
+.data-grid-wrapper .ag-header-cell-comp-wrapper,
+.data-grid-wrapper .ag-header-group-cell-label {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-height: 0;
+}
+
+.data-grid-wrapper .ag-header-cell-label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.data-grid-wrapper .ag-cell {
+  display: flex;
+  align-items: center;
+  font-weight: 500 !important;
+}
+
+.data-grid-wrapper .ag-cell-wrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* 본문: 텍스트·에디터가 들어가는 영역을 행 높이에 맞춰 수직 가운데 (wrapper만 맞출 때 생기는 어긋남 보정) */
+.data-grid-wrapper .ag-body .ag-cell .ag-cell-value,
+.data-grid-wrapper .ag-body .ag-cell .ag-react-container {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Bootstrap cellClass 등 우측 정렬: flex에서는 justify로 맞춤 */
+.data-grid-wrapper .ag-cell.text-end .ag-cell-wrapper,
+.data-grid-wrapper .ag-cell.ag-right-aligned-cell .ag-cell-wrapper {
+  justify-content: flex-end;
+}
+
+/* 가운데 정렬 (헤더·셀) */
+.data-grid-wrapper .ag-cell.text-center .ag-cell-wrapper {
+  justify-content: center;
+}
+
+.data-grid-wrapper .ag-header-cell.text-center .ag-header-cell-comp-wrapper,
+.data-grid-wrapper .ag-header-cell.text-center .ag-header-cell-label {
+  justify-content: center;
+  width: 100%;
+}
+
+.data-grid-wrapper .ag-row .ag-cell-wrapper.ag-row-group {
+  align-items: center;
+}
+
+.data-grid-wrapper .ag-floating-filter-body {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.data-grid-wrapper .ag-cell .small,
+.data-grid-wrapper .ag-cell code.small {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.data-grid-container {
+  position: relative;
+  min-height: 200px;
+  border: var(--data-grid-chrome-border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* 컨테이너가 외곽선을 담당 — AG 루트의 박스 테두리는 제거해 헤더·본문 외곽이 굵게 보이지 않게 함 */
+.data-grid-wrapper .data-grid-body .ag-root-wrapper,
+.data-grid-wrapper .data-grid-body .ag-root {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* 헤더 맨 오른쪽: 스크롤 영역·우측 핀의 마지막 열 우측 세로선은 컨테이너 테두리와 중복이므로 제거 */
+.data-grid-wrapper .ag-header-viewport .ag-header-cell:last-child,
+.data-grid-wrapper .ag-header-viewport .ag-header-group-cell:last-child,
+.data-grid-wrapper .ag-pinned-right-header .ag-header-cell:last-child,
+.data-grid-wrapper .ag-pinned-right-header .ag-header-group-cell:last-child {
+  border-right: none !important;
+}
+
+.data-grid-wrapper .ag-header-viewport .ag-header-row-column-filter .ag-header-cell:last-child,
+.data-grid-wrapper .ag-pinned-right-header .ag-header-row-column-filter .ag-header-cell:last-child {
+  border-right: none !important;
+}
+
+/* 커스텀 푸터가 있을 때: 마지막 행 셀 하단선 + 푸터 상단선 이중 제거 → 푸터 border-top 한 줄만 */
+.data-grid-container:has(.data-grid-footer) .data-grid-body .ag-body .ag-row:last-child .ag-cell {
+  border-bottom: none !important;
+}
+
+.data-grid-body > div {
+  flex: 1;
+  min-height: 0;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.data-grid-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.data-grid-container:has(.data-grid-footer) [class*='paging'] {
+  display: none !important;
+}
+
+.data-grid-container [class*='paging'] {
+  background: #f8f9fa !important;
+  border-top: var(--data-grid-chrome-border) !important;
+  font-size: 13px !important;
+  color: #334155 !important;
+}
+
+.data-grid-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 10;
+}
+
+.data-grid-loading-text {
+  font-size: 0.875rem;
+  color: var(--phoenix-body-tertiary, #6c757d);
+}
+
+/* 본문 데이터: 열마다 동일 폰트 패밀리·크기·행간·굵기 (포맷터·React 렌더·AG 테마 차이 흡수) */
+.data-grid-wrapper .ag-body .ag-cell,
+.data-grid-wrapper .ag-body .ag-cell .ag-cell-wrapper,
+.data-grid-wrapper .ag-body .ag-cell .ag-cell-value,
+.data-grid-wrapper .ag-body .ag-cell .ag-group-value,
+.data-grid-wrapper .ag-body .ag-cell .ag-spanned-cell-wrapper,
+.data-grid-wrapper .ag-body .ag-cell .ag-react-container {
+  font-family: var(--phoenix-font-sans-serif, inherit) !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+  font-style: normal !important;
+  letter-spacing: normal !important;
+}
+
+.data-grid-wrapper .ag-body .ag-cell .ag-cell-value span,
+.data-grid-wrapper .ag-body .ag-cell .ag-react-container span,
+.data-grid-wrapper .ag-body .ag-cell .ag-react-container a,
+.data-grid-wrapper .ag-body .ag-cell .ag-react-container p {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  letter-spacing: inherit !important;
+}
+
+.data-grid-wrapper .ag-body .ag-cell input:not([type='checkbox']):not([type='radio']),
+.data-grid-wrapper .ag-body .ag-cell textarea,
+.data-grid-wrapper .ag-body .ag-cell select {
+  font-family: var(--phoenix-font-sans-serif, inherit) !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.35 !important;
+  font-weight: 500 !important;
+}
+
+.data-grid-wrapper .ag-body .ag-cell button:not(.dropdown-toggle) {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: 500 !important;
+}
+
+.data-grid-container--has-selection-column .ag-cell:first-child {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.data-grid-toolbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  pointer-events: auto;
+  width: 100%;
+}
+
+.data-grid-toolbar--rows {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+.data-grid-toolbar--rows .data-grid-toolbar__primary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.data-grid-toolbar--rows .data-grid-toolbar__secondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.data-grid-footer {
+  flex-shrink: 0;
+  min-height: 40px;
+  height: 40px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  border-top: var(--data-grid-chrome-border);
+  font-size: 13px;
+  color: #334155;
+}
+
+.data-grid-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.data-grid-footer-left,
+.data-grid-footer-center,
+.data-grid-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.data-grid-footer-center {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.data-grid-footer-right {
+  justify-content: flex-end;
+}
+
+.data-grid-footer-label {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 400;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.data-grid-footer-range {
+  white-space: nowrap;
+}
+
+.data-grid-footer-page-of {
+  margin: 0 4px;
+  white-space: nowrap;
+}
+
+.data-grid-footer-btn {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 1;
+  color: inherit;
+  background: transparent;
+  border: var(--data-grid-chrome-border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.data-grid-footer-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.data-grid-footer-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
